@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 
 interface Task {
-  id: number
+  id: string
   title: string
   description: string
   status: string
-  priority: string
-  assignee: string
+  priority: number | string
+  assigned_to: string
+  project: string
   created_at: string
 }
 
@@ -20,16 +21,26 @@ const COLUMNS = [
   { key: 'done', label: '✅ Done' },
 ]
 
-function priorityColor(priority: string) {
-  switch (priority?.toLowerCase()) {
-    case 'high': case 'alta': return 'text-red-400 border-red-400/30'
-    case 'medium': case 'media': return 'text-yellow-400 border-yellow-400/30'
-    case 'low': case 'baja': return 'text-gray-400 border-gray-400/30'
+function priorityColor(priority: number | string): string {
+  const p = String(priority)
+  switch (p) {
+    case '1': case 'high': case 'alta': return 'text-red-400 border-red-400/30'
+    case '2': case 'medium': case 'media': return 'text-yellow-400 border-yellow-400/30'
+    case '3': case 'low': case 'baja': return 'text-gray-400 border-gray-400/30'
     default: return 'text-gray-500 border-gray-500/30'
   }
 }
+function priorityLabel(priority: number | string): string {
+  const p = String(priority)
+  switch (p) {
+    case '1': return '🔴 Alta'
+    case '2': return '🟡 Media'
+    case '3': return '🟢 Baja'
+    default: return p
+  }
+}
 
-function TaskCard({ task, onMove }: { task: Task; onMove: (id: number, status: string) => void }) {
+function TaskCard({ task, onMove }: { task: Task; onMove: (id: string, status: string) => void }) {
   const [showMove, setShowMove] = useState(false)
 
   return (
@@ -51,11 +62,11 @@ function TaskCard({ task, onMove }: { task: Task; onMove: (id: number, status: s
       <div className="flex items-center justify-between mt-2">
         {task.priority && (
           <span className={`text-xs border rounded px-1 ${priorityColor(task.priority)}`}>
-            {task.priority}
+            {priorityLabel(task.priority)}
           </span>
         )}
-        {task.assignee && (
-          <span className="text-xs text-gray-600 truncate max-w-[80px]">{task.assignee}</span>
+        {task.assigned_to && (
+          <span className="text-xs text-gray-600 truncate max-w-[80px]">{task.assigned_to}</span>
         )}
       </div>
 
@@ -90,28 +101,33 @@ export default function KanbanBoard() {
     fetchTasks()
   }, [])
 
+  // Usa URL absoluta para funcionar en Next.js standalone
+  const apiBase = typeof window !== 'undefined' ? window.location.origin : ''
+
   async function fetchTasks() {
     try {
-      const res = await fetch('/api/tasks')
+      const res = await fetch(`${apiBase}/api/tasks`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
-      setTasks(data)
-    } catch {
+      setTasks(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error('fetchTasks error:', e)
       setTasks([])
     } finally {
       setLoading(false)
     }
   }
 
-  async function moveTask(id: number, status: string) {
+  async function moveTask(id: string, status: string) {
     try {
-      await fetch(`/api/tasks/${id}`, {
+      await fetch(`${apiBase}/api/tasks/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       })
       setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)))
-    } catch {
-      alert('Error al mover tarea')
+    } catch (e) {
+      console.error('moveTask error:', e)
     }
   }
 
@@ -119,17 +135,18 @@ export default function KanbanBoard() {
     if (!newTask.title.trim()) return
     setSaving(true)
     try {
-      const res = await fetch('/api/tasks', {
+      const res = await fetch(`${apiBase}/api/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTask),
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const created = await res.json()
       setTasks((prev) => [created, ...prev])
       setNewTask({ title: '', description: '', status: 'backlog', priority: 'medium' })
       setShowNewTask(false)
-    } catch {
-      alert('Error al crear tarea')
+    } catch (e) {
+      console.error('createTask error:', e)
     } finally {
       setSaving(false)
     }
