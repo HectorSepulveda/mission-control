@@ -14,79 +14,115 @@ interface Task {
 }
 
 const COLUMNS = [
-  { key: 'recurring', label: '🔄 Recurring', color: 'border-purple-500/30' },
-  { key: 'backlog', label: '📋 Backlog', color: 'border-gray-500/30' },
-  { key: 'in_progress', label: '⚡ En Progreso', color: 'border-yellow-500/30' },
-  { key: 'review', label: '👀 Revisión', color: 'border-blue-500/30' },
-  { key: 'done', label: '✅ Listo', color: 'border-green-500/30' },
+  { key: 'recurring', label: 'Recurring', icon: '🔄', borderColor: 'rgba(139,92,246,0.4)', badgeBg: 'rgba(139,92,246,0.12)', badgeColor: '#a78bfa' },
+  { key: 'backlog', label: 'Backlog', icon: '📋', borderColor: 'rgba(100,116,139,0.4)', badgeBg: 'rgba(100,116,139,0.1)', badgeColor: '#94a3b8' },
+  { key: 'in_progress', label: 'En Progreso', icon: '⚡', borderColor: 'rgba(234,179,8,0.4)', badgeBg: 'rgba(234,179,8,0.1)', badgeColor: '#facc15' },
+  { key: 'review', label: 'Revisión', icon: '👀', borderColor: 'rgba(59,130,246,0.4)', badgeBg: 'rgba(59,130,246,0.1)', badgeColor: '#60a5fa' },
+  { key: 'done', label: 'Listo', icon: '✅', borderColor: 'rgba(34,197,94,0.4)', badgeBg: 'rgba(34,197,94,0.1)', badgeColor: '#4ade80' },
 ]
 
-function priorityColor(priority: number | string): string {
+function priorityStyle(priority: number | string) {
   const p = String(priority)
   switch (p) {
-    case '1': case 'high': return 'text-red-400 border-red-400/30 bg-red-400/10'
-    case '2': case 'medium': return 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10'
-    case '3': case 'low': return 'text-gray-400 border-gray-400/30 bg-gray-400/10'
-    default: return 'text-gray-500 border-gray-500/30'
-  }
-}
-
-function priorityLabel(priority: number | string): string {
-  const p = String(priority)
-  switch (p) {
-    case '1': return '🔴 Alta'
-    case '2': return '🟡 Media'
-    case '3': return '🟢 Baja'
-    default: return p
+    case '1': case 'high':
+      return { color: '#f87171', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.25)', label: 'Alta' }
+    case '2': case 'medium':
+      return { color: '#facc15', bg: 'rgba(234,179,8,0.1)', border: 'rgba(234,179,8,0.25)', label: 'Media' }
+    case '3': case 'low':
+      return { color: '#4ade80', bg: 'rgba(34,197,94,0.1)', border: 'rgba(34,197,94,0.25)', label: 'Baja' }
+    default:
+      return { color: '#64748b', bg: 'rgba(100,116,139,0.08)', border: 'rgba(100,116,139,0.2)', label: p }
   }
 }
 
 function TaskCard({ task, onMove }: { task: Task; onMove: (id: string, status: string) => void }) {
   const [showMove, setShowMove] = useState(false)
+  const pStyle = priorityStyle(task.priority)
 
   return (
-    <div className="bg-dark-surface border border-dark-border rounded-lg p-3 text-sm relative group hover:border-brand-green/30 transition-colors">
+    <div
+      className="relative group rounded-xl p-3 text-sm transition-all"
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.07)',
+        transition: 'border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease',
+      }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLElement
+        el.style.borderColor = 'rgba(255,255,255,0.12)'
+        el.style.transform = 'translateY(-1px)'
+        el.style.boxShadow = '0 4px 16px rgba(0,0,0,0.3)'
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLElement
+        el.style.borderColor = 'rgba(255,255,255,0.07)'
+        el.style.transform = ''
+        el.style.boxShadow = ''
+      }}
+    >
       <div className="flex items-start justify-between gap-1">
-        <p className="font-medium text-white text-xs leading-relaxed flex-1">{task.title}</p>
+        <p className="font-medium text-xs leading-relaxed flex-1" style={{ color: '#e2e8f0' }}>
+          {task.title}
+        </p>
         <button
           onClick={() => setShowMove(!showMove)}
-          className="text-gray-600 hover:text-gray-300 text-lg leading-none flex-shrink-0 -mt-0.5 w-5 text-center"
+          className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 -mt-0.5 w-5 text-center rounded text-base leading-none"
+          style={{ color: '#64748b' }}
         >
           ⋮
         </button>
       </div>
 
       {task.description && (
-        <p className="text-gray-500 text-xs mt-1 line-clamp-2">{task.description}</p>
+        <p className="text-[10px] mt-1 line-clamp-2" style={{ color: '#475569' }}>
+          {task.description}
+        </p>
       )}
 
-      <div className="flex items-center justify-between mt-2 gap-1 flex-wrap">
+      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
         {task.priority && (
-          <span className={`text-xs border rounded px-1.5 py-0.5 ${priorityColor(task.priority)}`}>
-            {priorityLabel(task.priority)}
+          <span
+            className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+            style={{ color: pStyle.color, background: pStyle.bg, border: `1px solid ${pStyle.border}` }}
+          >
+            {pStyle.label}
           </span>
         )}
         {task.project && task.project !== 'general' && (
-          <span className="text-xs text-brand-green/70 font-medium">{task.project}</span>
+          <span className="text-[10px] font-medium" style={{ color: '#22c55e' }}>
+            {task.project}
+          </span>
         )}
         {task.assigned_to && (
-          <span className="text-xs text-gray-600">{task.assigned_to === 'agent' ? '🤖' : '👤'}</span>
+          <span className="text-[10px]" style={{ color: '#475569' }}>
+            {task.assigned_to === 'agent' ? '🤖' : '👤'}
+          </span>
         )}
       </div>
 
+      {/* Move dropdown */}
       {showMove && (
-        <div className="absolute right-0 top-8 z-20 bg-dark-card border border-dark-border rounded-lg shadow-xl overflow-hidden min-w-[140px]">
-          <p className="text-xs text-gray-600 px-3 py-1.5 border-b border-dark-border">Mover a...</p>
+        <div
+          className="absolute right-0 top-8 z-20 rounded-xl shadow-2xl overflow-hidden min-w-[150px]"
+          style={{ background: '#0d0d10', border: '1px solid rgba(255,255,255,0.1)' }}
+        >
+          <p className="text-[10px] px-3 py-2" style={{ color: '#475569', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            Mover a...
+          </p>
           {COLUMNS.map((col) => (
             <button
               key={col.key}
-              onClick={() => {
-                onMove(task.id, col.key)
-                setShowMove(false)
+              onClick={() => { onMove(task.id, col.key); setShowMove(false) }}
+              className="flex items-center gap-2 w-full text-left text-xs px-3 py-2 transition-colors"
+              style={{
+                color: task.status === col.key ? col.badgeColor : '#94a3b8',
+                background: 'transparent',
               }}
-              className={`block w-full text-left text-xs px-3 py-1.5 hover:bg-dark-muted/30 text-gray-400 hover:text-white whitespace-nowrap ${task.status === col.key ? 'text-brand-green' : ''}`}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
             >
-              {col.label}
+              <span>{col.icon}</span>
+              <span>{col.label}</span>
             </button>
           ))}
         </div>
@@ -102,7 +138,6 @@ export default function KanbanBoard({ initialTasks = [] }: { initialTasks?: Task
   const [saving, setSaving] = useState(false)
 
   async function moveTask(id: string, status: string) {
-    // Optimistic update
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)))
     try {
       await fetch(`/api/tasks/${id}`, {
@@ -139,20 +174,24 @@ export default function KanbanBoard({ initialTasks = [] }: { initialTasks?: Task
 
   return (
     <div>
-      {/* Botón Nueva Tarea */}
-      <div className="mb-4">
+      {/* New Task Button */}
+      <div className="mb-5">
         <button
           onClick={() => setShowNewTask(!showNewTask)}
-          className="btn-primary text-sm"
+          className="btn-primary"
         >
-          {showNewTask ? '✕ Cancelar' : '+ Nueva tarea'}
+          {showNewTask ? (
+            <><span>✕</span> Cancelar</>
+          ) : (
+            <><span>+</span> Nueva tarea</>
+          )}
         </button>
       </div>
 
-      {/* Formulario nueva tarea */}
+      {/* New Task Form */}
       {showNewTask && (
-        <div className="card mb-4 border-brand-green/30">
-          <h3 className="text-sm font-semibold text-white mb-3">Nueva Tarea</h3>
+        <div className="card mb-5" style={{ borderColor: 'rgba(26,107,60,0.35)' }}>
+          <h3 className="text-sm font-semibold mb-4" style={{ color: '#f1f5f9' }}>Nueva Tarea</h3>
           <div className="space-y-3">
             <input
               type="text"
@@ -160,7 +199,15 @@ export default function KanbanBoard({ initialTasks = [] }: { initialTasks?: Task
               value={newTask.title}
               onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
               onKeyDown={(e) => e.key === 'Enter' && createTask()}
-              className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-green"
+              className="w-full rounded-xl px-3 py-2.5 text-sm transition-colors"
+              style={{
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#f1f5f9',
+                outline: 'none',
+              }}
+              onFocus={(e) => { (e.target as HTMLElement).style.borderColor = 'rgba(26,107,60,0.5)' }}
+              onBlur={(e) => { (e.target as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)' }}
               autoFocus
             />
             <textarea
@@ -168,39 +215,66 @@ export default function KanbanBoard({ initialTasks = [] }: { initialTasks?: Task
               value={newTask.description}
               onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
               rows={2}
-              className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-green resize-none"
+              className="w-full rounded-xl px-3 py-2.5 text-sm resize-none"
+              style={{
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#f1f5f9',
+                outline: 'none',
+              }}
+              onFocus={(e) => { (e.target as HTMLElement).style.borderColor = 'rgba(26,107,60,0.5)' }}
+              onBlur={(e) => { (e.target as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)' }}
             />
             <div className="flex gap-3">
               <select
                 value={newTask.status}
                 onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
-                className="flex-1 bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-green"
+                className="flex-1 rounded-xl px-3 py-2.5 text-sm"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#f1f5f9',
+                  outline: 'none',
+                }}
               >
                 {COLUMNS.map((c) => (
-                  <option key={c.key} value={c.key}>{c.label}</option>
+                  <option key={c.key} value={c.key} style={{ background: '#0d0d10' }}>{c.icon} {c.label}</option>
                 ))}
               </select>
               <select
                 value={newTask.priority}
                 onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                className="flex-1 bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-green"
+                className="flex-1 rounded-xl px-3 py-2.5 text-sm"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#f1f5f9',
+                  outline: 'none',
+                }}
               >
-                <option value="1">🔴 Alta</option>
-                <option value="2">🟡 Media</option>
-                <option value="3">🟢 Baja</option>
+                <option value="1" style={{ background: '#0d0d10' }}>🔴 Alta</option>
+                <option value="2" style={{ background: '#0d0d10' }}>🟡 Media</option>
+                <option value="3" style={{ background: '#0d0d10' }}>🟢 Baja</option>
               </select>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={createTask}
                 disabled={saving || !newTask.title.trim()}
-                className="btn-primary text-sm disabled:opacity-50"
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? 'Guardando...' : 'Crear tarea'}
               </button>
               <button
                 onClick={() => setShowNewTask(false)}
-                className="text-sm px-4 py-2 border border-dark-border rounded-lg text-gray-400 hover:text-white hover:border-dark-muted transition-colors"
+                className="text-sm px-4 py-2 rounded-xl transition-all"
+                style={{
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#94a3b8',
+                  background: 'transparent',
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.15)'; (e.currentTarget as HTMLElement).style.color = '#f1f5f9' }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = '#94a3b8' }}
               >
                 Cancelar
               </button>
@@ -214,20 +288,41 @@ export default function KanbanBoard({ initialTasks = [] }: { initialTasks?: Task
         {COLUMNS.map((col) => {
           const colTasks = tasks.filter((t) => t.status === col.key)
           return (
-            <div key={col.key} className={`flex-shrink-0 w-56 border rounded-lg p-2 ${col.color} bg-dark-surface/30`}>
+            <div
+              key={col.key}
+              className="flex-shrink-0 w-60 rounded-2xl p-3"
+              style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: `1px solid ${col.borderColor}`,
+              }}
+            >
+              {/* Column header */}
               <div className="flex items-center justify-between mb-3 px-1">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{col.label}</h3>
-                <span className="text-xs bg-dark-muted/50 text-gray-500 rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm">{col.icon}</span>
+                  <h3 className="text-xs font-semibold" style={{ color: '#94a3b8' }}>
+                    {col.label}
+                  </h3>
+                </div>
+                <span
+                  className="text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center"
+                  style={{ background: col.badgeBg, color: col.badgeColor }}
+                >
                   {colTasks.length}
                 </span>
               </div>
+
+              {/* Tasks */}
               <div className="space-y-2 min-h-[80px]">
                 {colTasks.map((task) => (
                   <TaskCard key={task.id} task={task} onMove={moveTask} />
                 ))}
                 {colTasks.length === 0 && (
-                  <div className="border border-dashed border-dark-border/50 rounded-lg h-14 flex items-center justify-center">
-                    <span className="text-xs text-gray-700">Vacío</span>
+                  <div
+                    className="rounded-xl h-14 flex items-center justify-center"
+                    style={{ border: '1px dashed rgba(255,255,255,0.06)' }}
+                  >
+                    <span className="text-[10px]" style={{ color: '#334155' }}>Vacío</span>
                   </div>
                 )}
               </div>

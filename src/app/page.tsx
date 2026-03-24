@@ -99,11 +99,11 @@ function timeAgo(date: string): string {
 
 function eventTypeColor(type: string): string {
   switch (type?.toLowerCase()) {
-    case 'error': return 'text-red-400'
-    case 'warning': return 'text-yellow-400'
-    case 'success': return 'text-green-400'
-    case 'task_complete': return 'text-green-400'
-    default: return 'text-blue-400'
+    case 'error': return '#f87171'
+    case 'warning': return '#fbbf24'
+    case 'success': case 'task_complete': return '#4ade80'
+    case 'task_start': return '#60a5fa'
+    default: return '#818cf8'
   }
 }
 
@@ -115,6 +115,10 @@ function eventTypeIcon(type: string): string {
     case 'task_start': return '🚀'
     default: return '📌'
   }
+}
+
+function agentInitial(name: string): string {
+  return (name || 'S').charAt(0).toUpperCase()
 }
 
 export const dynamic = 'force-dynamic'
@@ -136,72 +140,141 @@ export default async function DashboardPage() {
     minute: '2-digit',
   })
 
+  const stats = [
+    {
+      label: 'Proyectos Activos',
+      value: summary.activeProjects.toString(),
+      icon: '📁',
+      trend: '↑',
+      trendColor: '#4ade80',
+      variant: 'green' as const,
+    },
+    {
+      label: 'Agentes Activos',
+      value: summary.activeAgents.toString(),
+      icon: '🤖',
+      trend: '→',
+      trendColor: '#60a5fa',
+      variant: 'blue' as const,
+    },
+    {
+      label: 'Tokens Hoy',
+      value: formatNumber(summary.tokensToday),
+      icon: '⚡',
+      trend: summary.tokensToday > 0 ? '↑' : '—',
+      trendColor: '#fb923c',
+      variant: 'orange' as const,
+    },
+    {
+      label: 'Costo Hoy',
+      value: `$${summary.costUsd.toFixed(4)}`,
+      sub: `$${formatCLP(summary.costUsd)} CLP`,
+      icon: '💰',
+      trend: summary.costUsd > 0 ? '↑' : '—',
+      trendColor: '#fb923c',
+      variant: 'orange' as const,
+    },
+  ]
+
+  const serviceList = [
+    { name: 'n8n', up: services.n8n, ping: '—' },
+    { name: 'Coolify', up: services.coolify, ping: '—' },
+    { name: 'PostgreSQL', up: true, ping: '—' },
+    { name: 'GitHub', up: true, ping: '—' },
+  ]
+
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* ── Header ───────────────────────────────────── */}
+      <div className="flex items-start justify-between animate-fade-up">
         <div>
-          <h1 className="text-3xl font-bold text-white">Mission Control ⭐</h1>
-          <p className="text-gray-500 mt-1 capitalize">{now}</p>
+          <h1
+            className="text-3xl font-extrabold tracking-tight"
+            style={{
+              background: 'linear-gradient(135deg, #22c55e 0%, #34d399 45%, #6ee7b7 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            Mission Control
+          </h1>
+          <p className="mt-1 text-sm capitalize" style={{ color: '#64748b' }}>{now}</p>
         </div>
-        <div className="flex gap-3">
-          <ServiceBadge name="n8n" up={services.n8n} />
-          <ServiceBadge name="Coolify" up={services.coolify} />
+        <div className="flex flex-wrap gap-2">
+          {serviceList.map((s) => (
+            <ServiceBadge key={s.name} name={s.name} up={s.up} />
+          ))}
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <SummaryCard
-          label="Proyectos Activos"
-          value={summary.activeProjects.toString()}
-          icon="📁"
-          color="green"
-        />
-        <SummaryCard
-          label="Agentes Activos"
-          value={summary.activeAgents.toString()}
-          icon="🤖"
-          color="blue"
-        />
-        <SummaryCard
-          label="Tokens Hoy"
-          value={formatNumber(summary.tokensToday)}
-          icon="🔤"
-          color="orange"
-        />
-        <SummaryCard
-          label="Costo Hoy"
-          value={`$${summary.costUsd.toFixed(4)}`}
-          subtitle={`$${formatCLP(summary.costUsd)} CLP`}
-          icon="💰"
-          color="orange"
-        />
+      {/* ── Stats Grid ───────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, i) => (
+          <StatCard key={i} {...stat} />
+        ))}
       </div>
 
-      {/* Activity Feed */}
-      <div className="card">
-        <h2 className="text-lg font-semibold text-white mb-4">
-          Actividad Reciente
-          <span className="ml-2 text-sm text-gray-500 font-normal">(últimas 24h)</span>
+      {/* ── Services row ─────────────────────────────── */}
+      <div
+        className="card"
+        style={{ animationDelay: '0.1s' }}
+      >
+        <h2 className="text-sm font-semibold mb-4" style={{ color: '#94a3b8' }}>
+          Estado de Servicios
         </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {serviceList.map((s) => (
+            <ServiceRow key={s.name} name={s.name} up={s.up} ping={s.ping} />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Activity Feed ────────────────────────────── */}
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold" style={{ color: '#f1f5f9' }}>
+            Actividad Reciente
+          </h2>
+          <span className="text-xs" style={{ color: '#475569' }}>últimas 24h</span>
+        </div>
+
         {events.length === 0 ? (
-          <p className="text-gray-600 text-sm py-8 text-center">Sin actividad en las últimas 24 horas</p>
+          <div className="flex flex-col items-center justify-center py-14" style={{ color: '#475569' }}>
+            <div className="text-4xl mb-3 animate-float">🛸</div>
+            <p className="text-sm font-medium" style={{ color: '#64748b' }}>Sin actividad en las últimas 24 horas</p>
+            <p className="text-xs mt-1" style={{ color: '#334155' }}>Los agentes están esperando órdenes</p>
+          </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {events.map((event) => (
-              <div key={event.id} className="flex items-start gap-3 py-2 border-b border-dark-border last:border-0">
-                <span className="text-base mt-0.5">{eventTypeIcon(event.event_type)}</span>
+              <div
+                key={event.id}
+                className="flex items-start gap-3 py-2.5 px-2 rounded-xl transition-colors"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+              >
+                {/* Avatar */}
+                <div
+                  className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
+                  style={{ background: 'linear-gradient(135deg, rgba(26,107,60,0.5), rgba(230,126,34,0.3))' }}
+                >
+                  {agentInitial(event.agent_name)}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-white">{event.agent_name}</span>
-                    <span className={`text-xs ${eventTypeColor(event.event_type)}`}>
+                    <span className="text-xs font-semibold" style={{ color: '#e2e8f0' }}>{event.agent_name}</span>
+                    <span
+                      className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+                      style={{ color: eventTypeColor(event.event_type), background: `${eventTypeColor(event.event_type)}18` }}
+                    >
                       {event.event_type}
                     </span>
                   </div>
-                  <p className="text-xs text-gray-500 truncate">{event.description}</p>
+                  <p className="text-xs truncate mt-0.5" style={{ color: '#64748b' }}>{event.description}</p>
                 </div>
-                <span className="text-xs text-gray-600 whitespace-nowrap">{timeAgo(event.created_at)}</span>
+                <span className="text-[10px] whitespace-nowrap mt-0.5" style={{ color: '#475569' }}>
+                  {timeAgo(event.created_at)}
+                </span>
               </div>
             ))}
           </div>
@@ -211,41 +284,52 @@ export default async function DashboardPage() {
   )
 }
 
-function SummaryCard({
-  label,
-  value,
-  subtitle,
-  icon,
-  color,
+/* ── Sub-components ──────────────────────────────────── */
+
+function StatCard({
+  label, value, sub, icon, trend, trendColor, variant,
 }: {
   label: string
   value: string
-  subtitle?: string
+  sub?: string
   icon: string
-  color: 'green' | 'blue' | 'orange'
+  trend: string
+  trendColor: string
+  variant: 'green' | 'blue' | 'orange'
 }) {
   const borderColor = {
-    green: 'border-brand-green/30',
-    blue: 'border-blue-500/30',
-    orange: 'border-brand-orange/30',
-  }[color]
+    green: 'rgba(26,107,60,0.35)',
+    blue: 'rgba(59,130,246,0.3)',
+    orange: 'rgba(230,126,34,0.35)',
+  }[variant]
 
   const iconBg = {
-    green: 'bg-brand-green/10',
-    blue: 'bg-blue-500/10',
-    orange: 'bg-brand-orange/10',
-  }[color]
+    green: 'rgba(34,197,94,0.12)',
+    blue: 'rgba(59,130,246,0.12)',
+    orange: 'rgba(230,126,34,0.12)',
+  }[variant]
 
   return (
-    <div className={`card border ${borderColor}`}>
+    <div
+      className="card card-lift animate-fade-up"
+      style={{ borderColor }}
+    >
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs text-gray-500 mb-1">{label}</p>
-          <p className="text-2xl font-bold text-white">{value}</p>
-          {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-medium uppercase tracking-wide mb-1.5" style={{ color: '#64748b' }}>
+            {label}
+          </p>
+          <p className="text-2xl font-bold tracking-tight" style={{ color: '#f1f5f9' }}>{value}</p>
+          {sub && <p className="text-xs mt-0.5" style={{ color: '#64748b' }}>{sub}</p>}
         </div>
-        <div className={`${iconBg} rounded-lg p-2 text-xl`}>
-          {icon}
+        <div className="flex flex-col items-end gap-2">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+            style={{ background: iconBg }}
+          >
+            {icon}
+          </div>
+          <span className="text-xs font-semibold" style={{ color: trendColor }}>{trend}</span>
         </div>
       </div>
     </div>
@@ -254,13 +338,37 @@ function SummaryCard({
 
 function ServiceBadge({ name, up }: { name: string; up: boolean }) {
   return (
-    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium ${
-      up
-        ? 'bg-green-500/10 border-green-500/30 text-green-400'
-        : 'bg-red-500/10 border-red-500/30 text-red-400'
-    }`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${up ? 'bg-green-400' : 'bg-red-400'}`} />
-      {name}: {up ? 'UP' : 'DOWN'}
+    <div
+      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+      style={{
+        background: up ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
+        border: `1px solid ${up ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}`,
+        color: up ? '#4ade80' : '#f87171',
+      }}
+    >
+      <span
+        className={`w-1.5 h-1.5 rounded-full ${up ? 'dot-pulse' : ''}`}
+        style={{ background: up ? '#4ade80' : '#f87171' }}
+      />
+      {name}
+    </div>
+  )
+}
+
+function ServiceRow({ name, up, ping }: { name: string; up: boolean; ping: string }) {
+  return (
+    <div
+      className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+      style={{ background: 'rgba(255,255,255,0.025)' }}
+    >
+      <div className="flex items-center gap-2">
+        <span
+          className={`w-2 h-2 rounded-full flex-shrink-0 ${up ? 'dot-pulse' : ''}`}
+          style={{ background: up ? '#4ade80' : '#f87171' }}
+        />
+        <span className="text-xs font-medium" style={{ color: '#cbd5e1' }}>{name}</span>
+      </div>
+      <span className="text-[10px]" style={{ color: '#475569' }}>{ping}ms</span>
     </div>
   )
 }

@@ -54,12 +54,16 @@ function formatTokens(n: string): string {
   return num.toString()
 }
 
-function providerColor(provider: string): string {
+function providerStyle(provider: string) {
   switch (provider?.toLowerCase()) {
-    case 'anthropic': return 'bg-orange-500/20 text-orange-300 border-orange-500/30'
-    case 'openai': return 'bg-green-500/20 text-green-300 border-green-500/30'
-    case 'google': return 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-    default: return 'bg-gray-500/20 text-gray-300 border-gray-500/30'
+    case 'anthropic':
+      return { color: '#fb923c', bg: 'rgba(230,126,34,0.1)', border: 'rgba(230,126,34,0.3)' }
+    case 'openai':
+      return { color: '#4ade80', bg: 'rgba(34,197,94,0.1)', border: 'rgba(34,197,94,0.3)' }
+    case 'google':
+      return { color: '#60a5fa', bg: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.3)' }
+    default:
+      return { color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)' }
   }
 }
 
@@ -72,54 +76,112 @@ export default async function CostsPage() {
   const totalClp = Math.round(totalUsd * CLP_RATE)
   const totalTokens = costs.reduce((sum, r) => sum + parseInt(r.tokens || '0'), 0)
 
-  // Bar chart data
   const maxCost = Math.max(...dailyCosts.map((d) => parseFloat(d.cost || '0')), 0.001)
+
+  const summaryCards = [
+    {
+      label: 'Total USD',
+      value: `$${totalUsd.toFixed(4)}`,
+      icon: '💵',
+      variant: 'orange' as const,
+      sub: 'Acumulado histórico',
+    },
+    {
+      label: 'Total CLP',
+      value: `$${totalClp.toLocaleString('es-CL')}`,
+      icon: '🇨🇱',
+      variant: 'green' as const,
+      sub: `≈ ${CLP_RATE} CLP/USD`,
+    },
+    {
+      label: 'Tokens Totales',
+      value: formatTokens(totalTokens.toString()),
+      icon: '⚡',
+      variant: 'blue' as const,
+      sub: 'Input + Output',
+    },
+  ]
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Costos IA 💰</h1>
-        <p className="text-gray-500 mt-1">Uso y gasto por proveedor y modelo</p>
+      {/* Header */}
+      <div className="mb-8 animate-fade-up">
+        <h1
+          className="text-2xl font-bold"
+          style={{
+            background: 'linear-gradient(135deg, #f1f5f9, #94a3b8)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}
+        >
+          Costos IA
+        </h1>
+        <p className="text-sm mt-1" style={{ color: '#64748b' }}>Uso y gasto por proveedor y modelo</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="card border border-brand-orange/30">
-          <p className="text-xs text-gray-500 mb-1">Total USD</p>
-          <p className="text-2xl font-bold text-white">${totalUsd.toFixed(4)}</p>
-        </div>
-        <div className="card border border-brand-green/30">
-          <p className="text-xs text-gray-500 mb-1">Total CLP</p>
-          <p className="text-2xl font-bold text-white">${totalClp.toLocaleString('es-CL')}</p>
-          <p className="text-xs text-gray-500 mt-0.5">≈ {CLP_RATE} CLP/USD</p>
-        </div>
-        <div className="card border border-blue-500/30">
-          <p className="text-xs text-gray-500 mb-1">Tokens Totales</p>
-          <p className="text-2xl font-bold text-white">{formatTokens(totalTokens.toString())}</p>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {summaryCards.map((card) => {
+          const borderColor = {
+            orange: 'rgba(230,126,34,0.35)',
+            green: 'rgba(26,107,60,0.35)',
+            blue: 'rgba(59,130,246,0.3)',
+          }[card.variant]
+          const iconBg = {
+            orange: 'rgba(230,126,34,0.12)',
+            green: 'rgba(34,197,94,0.12)',
+            blue: 'rgba(59,130,246,0.12)',
+          }[card.variant]
+
+          return (
+            <div key={card.label} className="card card-lift" style={{ borderColor }}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-wide mb-1.5" style={{ color: '#64748b' }}>
+                    {card.label}
+                  </p>
+                  <p className="text-2xl font-bold" style={{ color: '#f1f5f9' }}>{card.value}</p>
+                  {card.sub && <p className="text-xs mt-1" style={{ color: '#475569' }}>{card.sub}</p>}
+                </div>
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
+                  style={{ background: iconBg }}
+                >
+                  {card.icon}
+                </div>
+              </div>
+            </div>
+          )
+        })}
       </div>
 
-      {/* Bar Chart - últimos 7 días */}
+      {/* Bar Chart */}
       {dailyCosts.length > 0 && (
-        <div className="card mb-8">
-          <h2 className="text-base font-semibold text-white mb-4">Últimos 7 días (USD)</h2>
-          <div className="flex items-end gap-2 h-32">
+        <div className="card mb-6">
+          <h2 className="text-sm font-semibold mb-4" style={{ color: '#94a3b8' }}>
+            Últimos 7 días (USD)
+          </h2>
+          <div className="flex items-end gap-2 h-28">
             {dailyCosts.map((d) => {
               const cost = parseFloat(d.cost || '0')
-              const heightPct = Math.max((cost / maxCost) * 100, 2)
+              const heightPct = Math.max((cost / maxCost) * 100, 3)
               const dateLabel = new Date(d.date).toLocaleDateString('es-CL', {
                 month: 'short',
                 day: 'numeric',
               })
               return (
                 <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-xs text-gray-500">${cost.toFixed(3)}</span>
+                  <span className="text-[10px]" style={{ color: '#64748b' }}>${cost.toFixed(3)}</span>
                   <div
-                    className="w-full bg-brand-orange/70 hover:bg-brand-orange rounded-t transition-colors"
-                    style={{ height: `${heightPct}%` }}
+                    className="w-full rounded-t-lg transition-all"
+                    style={{
+                      height: `${heightPct}%`,
+                      background: 'linear-gradient(180deg, rgba(230,126,34,0.8), rgba(230,126,34,0.4))',
+                    }}
                     title={`${dateLabel}: $${cost.toFixed(4)}`}
                   />
-                  <span className="text-xs text-gray-600">{dateLabel}</span>
+                  <span className="text-[10px]" style={{ color: '#475569' }}>{dateLabel}</span>
                 </div>
               )
             })}
@@ -129,20 +191,29 @@ export default async function CostsPage() {
 
       {/* Costs Table */}
       <div className="card">
-        <h2 className="text-base font-semibold text-white mb-4">Por Proveedor / Modelo</h2>
+        <h2 className="text-sm font-semibold mb-4" style={{ color: '#94a3b8' }}>
+          Por Proveedor / Modelo
+        </h2>
+
         {costs.length === 0 ? (
-          <p className="text-gray-600 text-sm py-8 text-center">Sin datos de costos aún</p>
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="text-5xl mb-4 animate-float">💰</div>
+            <p className="font-semibold" style={{ color: '#64748b' }}>Sin datos de costos aún</p>
+            <p className="text-sm mt-1 text-center max-w-xs" style={{ color: '#334155' }}>
+              Cuando los agentes comiencen a operar, los costos aparecerán aquí.
+            </p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-dark-border text-left">
-                  <th className="pb-3 text-gray-500 font-medium">Proveedor</th>
-                  <th className="pb-3 text-gray-500 font-medium">Modelo</th>
-                  <th className="pb-3 text-gray-500 font-medium text-right">Tokens</th>
-                  <th className="pb-3 text-gray-500 font-medium text-right">USD</th>
-                  <th className="pb-3 text-gray-500 font-medium text-right">CLP</th>
-                  <th className="pb-3 text-gray-500 font-medium text-right">% del total</th>
+                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                  <th className="pb-3 text-left text-xs font-semibold" style={{ color: '#475569' }}>Proveedor</th>
+                  <th className="pb-3 text-left text-xs font-semibold" style={{ color: '#475569' }}>Modelo</th>
+                  <th className="pb-3 text-right text-xs font-semibold" style={{ color: '#475569' }}>Tokens</th>
+                  <th className="pb-3 text-right text-xs font-semibold" style={{ color: '#475569' }}>USD</th>
+                  <th className="pb-3 text-right text-xs font-semibold" style={{ color: '#475569' }}>CLP</th>
+                  <th className="pb-3 text-right text-xs font-semibold" style={{ color: '#475569' }}>% del total</th>
                 </tr>
               </thead>
               <tbody>
@@ -150,26 +221,44 @@ export default async function CostsPage() {
                   const costUsd = parseFloat(row.cost || '0')
                   const pct = totalUsd > 0 ? (costUsd / totalUsd) * 100 : 0
                   const costClp = Math.round(costUsd * CLP_RATE)
+                  const pStyle = providerStyle(row.provider)
+                  const isEven = i % 2 === 0
+
                   return (
-                    <tr key={i} className="border-b border-dark-border/50 hover:bg-dark-muted/10">
+                    <tr
+                      key={i}
+                      style={{
+                        borderBottom: '1px solid rgba(255,255,255,0.04)',
+                        background: isEven ? 'transparent' : 'rgba(255,255,255,0.015)',
+                        transition: 'background 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)' }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = isEven ? 'transparent' : 'rgba(255,255,255,0.015)' }}
+                    >
                       <td className="py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded border font-medium ${providerColor(row.provider)}`}>
+                        <span
+                          className="text-xs px-2.5 py-1 rounded-lg font-medium"
+                          style={{ color: pStyle.color, background: pStyle.bg, border: `1px solid ${pStyle.border}` }}
+                        >
                           {row.provider}
                         </span>
                       </td>
-                      <td className="py-3 text-gray-300 font-mono text-xs">{row.model}</td>
-                      <td className="py-3 text-gray-300 text-right">{formatTokens(row.tokens)}</td>
-                      <td className="py-3 text-white font-medium text-right">${costUsd.toFixed(4)}</td>
-                      <td className="py-3 text-gray-400 text-right">${costClp.toLocaleString('es-CL')}</td>
+                      <td className="py-3 font-mono text-xs" style={{ color: '#94a3b8' }}>{row.model}</td>
+                      <td className="py-3 text-right text-xs" style={{ color: '#94a3b8' }}>{formatTokens(row.tokens)}</td>
+                      <td className="py-3 text-right text-sm font-semibold" style={{ color: '#f1f5f9' }}>${costUsd.toFixed(4)}</td>
+                      <td className="py-3 text-right text-xs" style={{ color: '#64748b' }}>${costClp.toLocaleString('es-CL')}</td>
                       <td className="py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <div className="w-16 bg-dark-muted/30 rounded-full h-1.5">
+                          <div className="w-16 rounded-full h-1.5" style={{ background: 'rgba(255,255,255,0.07)' }}>
                             <div
-                              className="bg-brand-orange/70 h-1.5 rounded-full"
-                              style={{ width: `${pct}%` }}
+                              className="h-1.5 rounded-full"
+                              style={{
+                                width: `${pct}%`,
+                                background: 'linear-gradient(90deg, rgba(230,126,34,0.8), rgba(230,126,34,0.4))',
+                              }}
                             />
                           </div>
-                          <span className="text-gray-500 text-xs w-8">{pct.toFixed(0)}%</span>
+                          <span className="text-xs w-8" style={{ color: '#64748b' }}>{pct.toFixed(0)}%</span>
                         </div>
                       </td>
                     </tr>
@@ -177,12 +266,12 @@ export default async function CostsPage() {
                 })}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-dark-border">
-                  <td colSpan={2} className="pt-3 text-gray-400 font-medium">Total</td>
-                  <td className="pt-3 text-gray-300 text-right">{formatTokens(totalTokens.toString())}</td>
-                  <td className="pt-3 text-white font-bold text-right">${totalUsd.toFixed(4)}</td>
-                  <td className="pt-3 text-gray-400 text-right">${totalClp.toLocaleString('es-CL')}</td>
-                  <td className="pt-3 text-gray-500 text-right">100%</td>
+                <tr style={{ borderTop: '2px solid rgba(255,255,255,0.1)' }}>
+                  <td colSpan={2} className="pt-3 text-xs font-semibold" style={{ color: '#94a3b8' }}>Total</td>
+                  <td className="pt-3 text-right text-xs" style={{ color: '#94a3b8' }}>{formatTokens(totalTokens.toString())}</td>
+                  <td className="pt-3 text-right text-sm font-bold" style={{ color: '#f1f5f9' }}>${totalUsd.toFixed(4)}</td>
+                  <td className="pt-3 text-right text-xs" style={{ color: '#64748b' }}>${totalClp.toLocaleString('es-CL')}</td>
+                  <td className="pt-3 text-right text-xs" style={{ color: '#64748b' }}>100%</td>
                 </tr>
               </tfoot>
             </table>
