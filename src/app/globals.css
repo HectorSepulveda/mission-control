@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-rgb: 10, 10, 10;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+}
+
+@layer components {
+  .card {
+    @apply bg-dark-card border border-dark-border rounded-xl p-5;
+  }
+  
+  .badge-green {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-green/20 text-green-400 border border-brand-green/30;
+  }
+  
+  .badge-gray {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-dark-muted/30 text-gray-400 border border-dark-border;
+  }
+  
+  .badge-orange {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-orange/20 text-orange-400 border border-brand-orange/30;
+  }
+  
+  .btn-primary {
+    @apply bg-brand-green hover:bg-brand-green-light text-white font-medium px-4 py-2 rounded-lg transition-colors;
+  }
+  
+  .nav-link {
+    @apply flex items-center gap-2 px-3 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-dark-card transition-colors;
+  }
+  
+  .nav-link.active {
+    @apply text-white bg-dark-card border border-dark-border;
+  }
+}
+
+/* Working status pulse animation */
+@keyframes working-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.working-badge {
+  animation: working-pulse 1.5s ease-in-out infinite;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1A1A1A;
+}
+::-webkit-scrollbar-thumb {
+  background: #2A2A2A;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3A3A3A;
+}

@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  mission-control:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mission-control
+    ports:
+      - "3100:3000"
+    environment:
+      - DATABASE_URL=postgresql://astro:astro_2026_secure@187.77.246.185:5433/astro_main
+      - NEXT_PUBLIC_APP_NAME=Mission Control
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
