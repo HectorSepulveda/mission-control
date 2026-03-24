@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 interface Task {
   id: string
@@ -14,22 +14,23 @@ interface Task {
 }
 
 const COLUMNS = [
-  { key: 'recurring', label: '🔄 Recurring' },
-  { key: 'backlog', label: '📋 Backlog' },
-  { key: 'in_progress', label: '⚡ In Progress' },
-  { key: 'review', label: '👀 Review' },
-  { key: 'done', label: '✅ Done' },
+  { key: 'recurring', label: '🔄 Recurring', color: 'border-purple-500/30' },
+  { key: 'backlog', label: '📋 Backlog', color: 'border-gray-500/30' },
+  { key: 'in_progress', label: '⚡ En Progreso', color: 'border-yellow-500/30' },
+  { key: 'review', label: '👀 Revisión', color: 'border-blue-500/30' },
+  { key: 'done', label: '✅ Listo', color: 'border-green-500/30' },
 ]
 
 function priorityColor(priority: number | string): string {
   const p = String(priority)
   switch (p) {
-    case '1': case 'high': case 'alta': return 'text-red-400 border-red-400/30'
-    case '2': case 'medium': case 'media': return 'text-yellow-400 border-yellow-400/30'
-    case '3': case 'low': case 'baja': return 'text-gray-400 border-gray-400/30'
+    case '1': case 'high': return 'text-red-400 border-red-400/30 bg-red-400/10'
+    case '2': case 'medium': return 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10'
+    case '3': case 'low': return 'text-gray-400 border-gray-400/30 bg-gray-400/10'
     default: return 'text-gray-500 border-gray-500/30'
   }
 }
+
 function priorityLabel(priority: number | string): string {
   const p = String(priority)
   switch (p) {
@@ -44,12 +45,12 @@ function TaskCard({ task, onMove }: { task: Task; onMove: (id: string, status: s
   const [showMove, setShowMove] = useState(false)
 
   return (
-    <div className="bg-dark-surface border border-dark-border rounded-lg p-3 text-sm relative group">
+    <div className="bg-dark-surface border border-dark-border rounded-lg p-3 text-sm relative group hover:border-brand-green/30 transition-colors">
       <div className="flex items-start justify-between gap-1">
-        <p className="font-medium text-white text-xs leading-relaxed">{task.title}</p>
+        <p className="font-medium text-white text-xs leading-relaxed flex-1">{task.title}</p>
         <button
           onClick={() => setShowMove(!showMove)}
-          className="text-gray-600 hover:text-gray-400 text-lg leading-none flex-shrink-0 -mt-0.5"
+          className="text-gray-600 hover:text-gray-300 text-lg leading-none flex-shrink-0 -mt-0.5 w-5 text-center"
         >
           ⋮
         </button>
@@ -59,19 +60,23 @@ function TaskCard({ task, onMove }: { task: Task; onMove: (id: string, status: s
         <p className="text-gray-500 text-xs mt-1 line-clamp-2">{task.description}</p>
       )}
 
-      <div className="flex items-center justify-between mt-2">
+      <div className="flex items-center justify-between mt-2 gap-1 flex-wrap">
         {task.priority && (
-          <span className={`text-xs border rounded px-1 ${priorityColor(task.priority)}`}>
+          <span className={`text-xs border rounded px-1.5 py-0.5 ${priorityColor(task.priority)}`}>
             {priorityLabel(task.priority)}
           </span>
         )}
+        {task.project && task.project !== 'general' && (
+          <span className="text-xs text-brand-green/70 font-medium">{task.project}</span>
+        )}
         {task.assigned_to && (
-          <span className="text-xs text-gray-600 truncate max-w-[80px]">{task.assigned_to}</span>
+          <span className="text-xs text-gray-600">{task.assigned_to === 'agent' ? '🤖' : '👤'}</span>
         )}
       </div>
 
       {showMove && (
-        <div className="absolute right-0 top-8 z-10 bg-dark-card border border-dark-border rounded-lg shadow-xl overflow-hidden">
+        <div className="absolute right-0 top-8 z-20 bg-dark-card border border-dark-border rounded-lg shadow-xl overflow-hidden min-w-[140px]">
+          <p className="text-xs text-gray-600 px-3 py-1.5 border-b border-dark-border">Mover a...</p>
           {COLUMNS.map((col) => (
             <button
               key={col.key}
@@ -79,7 +84,7 @@ function TaskCard({ task, onMove }: { task: Task; onMove: (id: string, status: s
                 onMove(task.id, col.key)
                 setShowMove(false)
               }}
-              className="block w-full text-left text-xs px-3 py-1.5 hover:bg-dark-muted/30 text-gray-400 hover:text-white whitespace-nowrap"
+              className={`block w-full text-left text-xs px-3 py-1.5 hover:bg-dark-muted/30 text-gray-400 hover:text-white whitespace-nowrap ${task.status === col.key ? 'text-brand-green' : ''}`}
             >
               {col.label}
             </button>
@@ -90,42 +95,21 @@ function TaskCard({ task, onMove }: { task: Task; onMove: (id: string, status: s
   )
 }
 
-export default function KanbanBoard() {
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [loading, setLoading] = useState(true)
+export default function KanbanBoard({ initialTasks = [] }: { initialTasks?: Task[] }) {
+  const [tasks, setTasks] = useState<Task[]>(initialTasks)
   const [showNewTask, setShowNewTask] = useState(false)
-  const [newTask, setNewTask] = useState({ title: '', description: '', status: 'backlog', priority: 'medium' })
+  const [newTask, setNewTask] = useState({ title: '', description: '', status: 'backlog', priority: '2' })
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    fetchTasks()
-  }, [])
-
-  // Usa URL absoluta para funcionar en Next.js standalone
-  const apiBase = typeof window !== 'undefined' ? window.location.origin : ''
-
-  async function fetchTasks() {
-    try {
-      const res = await fetch(`${apiBase}/api/tasks`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      setTasks(Array.isArray(data) ? data : [])
-    } catch (e) {
-      console.error('fetchTasks error:', e)
-      setTasks([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
   async function moveTask(id: string, status: string) {
+    // Optimistic update
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)))
     try {
-      await fetch(`${apiBase}/api/tasks/${id}`, {
+      await fetch(`/api/tasks/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       })
-      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)))
     } catch (e) {
       console.error('moveTask error:', e)
     }
@@ -135,35 +119,37 @@ export default function KanbanBoard() {
     if (!newTask.title.trim()) return
     setSaving(true)
     try {
-      const res = await fetch(`${apiBase}/api/tasks`, {
+      const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTask),
+        body: JSON.stringify({ ...newTask, priority: parseInt(newTask.priority) }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const created = await res.json()
       setTasks((prev) => [created, ...prev])
-      setNewTask({ title: '', description: '', status: 'backlog', priority: 'medium' })
+      setNewTask({ title: '', description: '', status: 'backlog', priority: '2' })
       setShowNewTask(false)
     } catch (e) {
       console.error('createTask error:', e)
+      alert('Error al crear tarea. Intenta de nuevo.')
     } finally {
       setSaving(false)
     }
   }
 
-  if (loading) {
-    return <div className="text-gray-500 text-sm py-8 text-center">Cargando tareas...</div>
-  }
-
   return (
     <div>
+      {/* Botón Nueva Tarea */}
       <div className="mb-4">
-        <button onClick={() => setShowNewTask(!showNewTask)} className="btn-primary text-sm">
-          + Nueva tarea
+        <button
+          onClick={() => setShowNewTask(!showNewTask)}
+          className="btn-primary text-sm"
+        >
+          {showNewTask ? '✕ Cancelar' : '+ Nueva tarea'}
         </button>
       </div>
 
+      {/* Formulario nueva tarea */}
       {showNewTask && (
         <div className="card mb-4 border-brand-green/30">
           <h3 className="text-sm font-semibold text-white mb-3">Nueva Tarea</h3>
@@ -173,7 +159,9 @@ export default function KanbanBoard() {
               placeholder="Título de la tarea *"
               value={newTask.title}
               onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+              onKeyDown={(e) => e.key === 'Enter' && createTask()}
               className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-brand-green"
+              autoFocus
             />
             <textarea
               placeholder="Descripción (opcional)"
@@ -197,13 +185,17 @@ export default function KanbanBoard() {
                 onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
                 className="flex-1 bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-green"
               >
-                <option value="low">🟢 Baja</option>
-                <option value="medium">🟡 Media</option>
-                <option value="high">🔴 Alta</option>
+                <option value="1">🔴 Alta</option>
+                <option value="2">🟡 Media</option>
+                <option value="3">🟢 Baja</option>
               </select>
             </div>
             <div className="flex gap-2">
-              <button onClick={createTask} disabled={saving} className="btn-primary text-sm">
+              <button
+                onClick={createTask}
+                disabled={saving || !newTask.title.trim()}
+                className="btn-primary text-sm disabled:opacity-50"
+              >
                 {saving ? 'Guardando...' : 'Crear tarea'}
               </button>
               <button
@@ -217,23 +209,24 @@ export default function KanbanBoard() {
         </div>
       )}
 
+      {/* Kanban columns */}
       <div className="flex gap-3 overflow-x-auto pb-4">
         {COLUMNS.map((col) => {
           const colTasks = tasks.filter((t) => t.status === col.key)
           return (
-            <div key={col.key} className="flex-shrink-0 w-60">
-              <div className="flex items-center justify-between mb-2">
+            <div key={col.key} className={`flex-shrink-0 w-56 border rounded-lg p-2 ${col.color} bg-dark-surface/30`}>
+              <div className="flex items-center justify-between mb-3 px-1">
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{col.label}</h3>
-                <span className="text-xs bg-dark-muted/30 text-gray-500 rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="text-xs bg-dark-muted/50 text-gray-500 rounded-full w-5 h-5 flex items-center justify-center font-medium">
                   {colTasks.length}
                 </span>
               </div>
-              <div className="space-y-2 min-h-[100px]">
+              <div className="space-y-2 min-h-[80px]">
                 {colTasks.map((task) => (
                   <TaskCard key={task.id} task={task} onMove={moveTask} />
                 ))}
                 {colTasks.length === 0 && (
-                  <div className="border border-dashed border-dark-border rounded-lg h-16 flex items-center justify-center">
+                  <div className="border border-dashed border-dark-border/50 rounded-lg h-14 flex items-center justify-center">
                     <span className="text-xs text-gray-700">Vacío</span>
                   </div>
                 )}

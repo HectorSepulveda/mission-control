@@ -16,17 +16,17 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { title, description, status = 'backlog', priority = 'medium', assignee } = body
+    const { title, description, status = 'backlog', priority = 2, assigned_to = 'human', project = 'general' } = body
 
     if (!title) {
       return NextResponse.json({ error: 'title is required' }, { status: 400 })
     }
 
     const rows = await query(
-      `INSERT INTO tasks (title, description, status, priority, assignee, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      `INSERT INTO tasks (title, description, status, priority, assigned_to, project, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
        RETURNING *`,
-      [title, description || null, status, priority, assignee || null]
+      [title, description || null, status, priority, assigned_to, project]
     )
     return NextResponse.json(rows[0], { status: 201 })
   } catch (err) {
