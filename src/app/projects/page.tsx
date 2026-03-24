@@ -1,11 +1,11 @@
 import { query } from '@/lib/db'
 
 interface Project {
-  id: number
+  id: string
   name: string
   description: string
   status: string
-  stack: string
+  stack: Record<string, boolean> | null
   created_at: string
   updated_at: string
 }
@@ -13,7 +13,8 @@ interface Project {
 async function getProjects(): Promise<Project[]> {
   try {
     return await query<Project>(`SELECT * FROM projects ORDER BY created_at DESC`)
-  } catch {
+  } catch (e) {
+    console.error('Error fetching projects:', e)
     return []
   }
 }
@@ -31,6 +32,23 @@ function statusBadge(status: string) {
     default:
       return <span className="badge-gray">{status || 'Sin estado'}</span>
   }
+}
+
+function stackTags(stack: Record<string, boolean> | null) {
+  if (!stack) return null
+  const tags = Object.entries(stack)
+    .filter(([, v]) => v === true)
+    .map(([k]) => k)
+  if (tags.length === 0) return null
+  return (
+    <div className="flex flex-wrap gap-1 mb-4">
+      {tags.map((tech) => (
+        <span key={tech} className="text-xs bg-dark-muted/30 text-gray-400 px-2 py-0.5 rounded border border-dark-border">
+          {tech}
+        </span>
+      ))}
+    </div>
+  )
 }
 
 export const dynamic = 'force-dynamic'
@@ -60,26 +78,16 @@ export default async function ProjectsPage() {
                 <h3 className="font-semibold text-white text-base">{project.name}</h3>
                 {statusBadge(project.status)}
               </div>
-              
+
               {project.description && (
                 <p className="text-sm text-gray-400 mb-3 line-clamp-2">{project.description}</p>
               )}
-              
-              {project.stack && (
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {project.stack.split(',').map((tech, i) => (
-                    <span key={i} className="text-xs bg-dark-muted/30 text-gray-400 px-2 py-0.5 rounded border border-dark-border">
-                      {tech.trim()}
-                    </span>
-                  ))}
-                </div>
-              )}
-              
+
+              {stackTags(project.stack)}
+
               <div className="flex items-center justify-between pt-3 border-t border-dark-border">
                 <span className="text-xs text-gray-600">
-                  {project.updated_at
-                    ? new Date(project.updated_at).toLocaleDateString('es-CL')
-                    : new Date(project.created_at).toLocaleDateString('es-CL')}
+                  {new Date(project.updated_at || project.created_at).toLocaleDateString('es-CL')}
                 </span>
                 <button className="text-xs text-brand-green hover:text-brand-green-light font-medium transition-colors">
                   Ver detalle →
