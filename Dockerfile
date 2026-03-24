@@ -14,33 +14,32 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build without env vars (they'll be injected at runtime)
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV DATABASE_URL postgresql://placeholder:placeholder@placeholder:5432/placeholder
+# Build with placeholder env (real values injected at runtime)
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_URL=postgresql://placeholder:placeholder@placeholder:5432/placeholder
+ENV NEXT_PUBLIC_APP_NAME=Mission_Control
 
 RUN npm run build
 
-# Production image, copy all the files and run next
+# Production image
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
 
-# Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
 EXPOSE 3000
-
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 CMD ["node", "server.js"]
