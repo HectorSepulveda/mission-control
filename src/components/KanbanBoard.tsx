@@ -190,7 +190,7 @@ export default function KanbanBoard({ initialTasks = [] }: { initialTasks?: Task
 
       {/* New Task Form */}
       {showNewTask && (
-        <div className="card mb-5" style={{ borderColor: 'rgba(26,107,60,0.35)' }}>
+        <div className="card mb-5 w-full" style={{ borderColor: 'rgba(26,107,60,0.35)' }}>
           <h3 className="text-sm font-semibold mb-4" style={{ color: '#f1f5f9' }}>Nueva Tarea</h3>
           <div className="space-y-3">
             <input
@@ -284,14 +284,16 @@ export default function KanbanBoard({ initialTasks = [] }: { initialTasks?: Task
       )}
 
       {/* Kanban columns */}
-      <div className="flex gap-3 overflow-x-auto pb-4">
+      <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 md:mx-0 md:px-0">
         {COLUMNS.map((col) => {
           const colTasks = tasks.filter((t) => t.status === col.key)
           return (
             <div
               key={col.key}
-              className="flex-shrink-0 w-60 rounded-2xl p-3"
+              className="flex-shrink-0 rounded-2xl p-3"
               style={{
+                width: '200px',
+                minWidth: '200px',
                 background: 'rgba(255,255,255,0.02)',
                 border: `1px solid ${col.borderColor}`,
               }}

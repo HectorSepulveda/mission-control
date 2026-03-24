@@ -184,12 +184,12 @@ export default async function DashboardPage() {
   ]
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-4 md:space-y-6">
       {/* ── Header ───────────────────────────────────── */}
-      <div className="flex items-start justify-between animate-fade-up">
+      <div className="flex items-start justify-between animate-fade-up gap-2">
         <div>
           <h1
-            className="text-3xl font-extrabold tracking-tight"
+            className="text-xl md:text-3xl font-extrabold tracking-tight"
             style={{
               background: 'linear-gradient(135deg, #22c55e 0%, #34d399 45%, #6ee7b7 100%)',
               WebkitBackgroundClip: 'text',
@@ -199,9 +199,10 @@ export default async function DashboardPage() {
           >
             Mission Control
           </h1>
-          <p className="mt-1 text-sm capitalize" style={{ color: '#64748b' }}>{now}</p>
+          <p className="mt-1 text-xs md:text-sm capitalize" style={{ color: '#64748b' }}>{now}</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        {/* Service badges — scroll horizontal en mobile */}
+        <div className="flex gap-1.5 overflow-x-auto flex-shrink-0 max-w-[50%] md:max-w-none pb-1">
           {serviceList.map((s) => (
             <ServiceBadge key={s.name} name={s.name} up={s.up} />
           ))}
@@ -209,7 +210,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Stats Grid ───────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {stats.map((stat, i) => (
           <StatCard key={i} {...stat} />
         ))}
@@ -220,13 +221,16 @@ export default async function DashboardPage() {
         className="card"
         style={{ animationDelay: '0.1s' }}
       >
-        <h2 className="text-sm font-semibold mb-4" style={{ color: '#94a3b8' }}>
+        <h2 className="text-sm font-semibold mb-3 md:mb-4" style={{ color: '#94a3b8' }}>
           Estado de Servicios
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {serviceList.map((s) => (
-            <ServiceRow key={s.name} name={s.name} up={s.up} ping={s.ping} />
-          ))}
+        {/* Scroll horizontal en mobile */}
+        <div className="overflow-x-auto -mx-1">
+          <div className="flex md:grid md:grid-cols-4 gap-3 min-w-max md:min-w-0 px-1">
+            {serviceList.map((s) => (
+              <ServiceRow key={s.name} name={s.name} up={s.up} ping={s.ping} />
+            ))}
+          </div>
         </div>
       </div>
 

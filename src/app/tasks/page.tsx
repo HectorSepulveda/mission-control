@@ -28,8 +28,8 @@ export default async function TasksPage() {
   const tasks = await getTasks()
 
   return (
-    <div className="p-6 max-w-full">
-      <div className="flex items-center justify-between mb-6 animate-fade-up">
+    <div className="p-4 md:p-6 max-w-full">
+      <div className="flex items-center justify-between mb-4 md:mb-6 animate-fade-up">
         <div>
           <h1
             className="text-2xl font-bold"

@@ -65,9 +65,9 @@ export default async function ProjectsPage() {
   const projects = await getProjects()
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 animate-fade-up">
+      <div className="flex items-center justify-between mb-6 md:mb-8 animate-fade-up">
         <div>
           <h1
             className="text-2xl font-bold"
@@ -99,7 +99,7 @@ export default async function ProjectsPage() {
           <p className="text-sm mt-1" style={{ color: '#334155' }}>Los proyectos aparecerán aquí cuando se creen</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {projects.map((project, i) => {
             const status = statusConfig(project.status)
             const gradient = headerGradients[i % headerGradients.length]

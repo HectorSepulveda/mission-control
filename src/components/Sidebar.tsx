@@ -45,14 +45,14 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="w-[220px] flex-shrink-0 flex flex-col"
+      className="hidden md:flex flex-col flex-shrink-0 w-14 lg:w-[220px] transition-all"
       style={{
         background: 'rgba(255,255,255,0.015)',
         borderRight: '1px solid rgba(255,255,255,0.06)',
       }}
     >
       {/* Logo */}
-      <div className="px-5 py-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div className="px-3 lg:px-5 py-5 border-b flex items-center justify-center lg:justify-start" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
@@ -60,7 +60,7 @@ export default function Sidebar() {
           >
             ⭐
           </div>
-          <div>
+          <div className="hidden lg:block">
             <div
               className="font-bold text-sm"
               style={{
@@ -78,48 +78,72 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {/* MAIN section */}
-        <p className="text-[10px] font-semibold uppercase tracking-widest px-3 pt-2 pb-1.5" style={{ color: '#334155' }}>
+      <nav className="flex-1 p-2 lg:p-3 space-y-0.5 overflow-y-auto">
+        {/* MAIN section label — only on desktop */}
+        <p className="hidden lg:block text-[10px] font-semibold uppercase tracking-widest px-3 pt-2 pb-1.5" style={{ color: '#334155' }}>
           Main
         </p>
         {mainNav.map((item) => {
           const isActive = pathname === item.href
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`nav-link ${isActive ? 'active' : ''}`}
-            >
-              <span className="flex-shrink-0">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
+            <div key={item.href} className="relative group">
+              <Link
+                href={item.href}
+                className={`nav-link flex items-center justify-center lg:justify-start ${isActive ? 'active' : ''}`}
+              >
+                <span className="flex-shrink-0">{item.icon}</span>
+                <span className="hidden lg:inline">{item.label}</span>
+              </Link>
+              {/* Tooltip for tablet (md, not lg) */}
+              <div
+                className="lg:hidden absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 rounded-lg text-xs font-medium whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50"
+                style={{
+                  background: 'rgba(13,13,16,0.95)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#e2e8f0',
+                }}
+              >
+                {item.label}
+              </div>
+            </div>
           )
         })}
 
         {/* SISTEMA section */}
-        <p className="text-[10px] font-semibold uppercase tracking-widest px-3 pt-4 pb-1.5" style={{ color: '#334155' }}>
+        <p className="hidden lg:block text-[10px] font-semibold uppercase tracking-widest px-3 pt-4 pb-1.5" style={{ color: '#334155' }}>
           Sistema
         </p>
         {systemNav.map((item) => {
           const isActive = pathname === item.href
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`nav-link ${isActive ? 'active' : ''}`}
-            >
-              <span className="flex-shrink-0">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
+            <div key={item.href} className="relative group">
+              <Link
+                href={item.href}
+                className={`nav-link flex items-center justify-center lg:justify-start ${isActive ? 'active' : ''}`}
+              >
+                <span className="flex-shrink-0">{item.icon}</span>
+                <span className="hidden lg:inline">{item.label}</span>
+              </Link>
+              {/* Tooltip for tablet */}
+              <div
+                className="lg:hidden absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 rounded-lg text-xs font-medium whitespace-nowrap pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50"
+                style={{
+                  background: 'rgba(13,13,16,0.95)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#e2e8f0',
+                }}
+              >
+                {item.label}
+              </div>
+            </div>
           )
         })}
       </nav>
 
       {/* Footer — Astro avatar */}
-      <div className="p-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      <div className="p-2 lg:p-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
         <div
-          className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
+          className="flex items-center justify-center lg:justify-start gap-2.5 px-2 lg:px-3 py-2 rounded-xl"
           style={{ background: 'rgba(255,255,255,0.025)' }}
         >
           <div className="relative flex-shrink-0">
@@ -135,7 +159,7 @@ export default function Sidebar() {
               style={{ background: '#22c55e', borderColor: 'var(--surface)' }}
             />
           </div>
-          <div className="min-w-0">
+          <div className="hidden lg:block min-w-0">
             <p className="text-xs font-semibold" style={{ color: '#e2e8f0' }}>Astro ⭐</p>
             <p className="text-[10px]" style={{ color: '#22c55e' }}>Online</p>
           </div>

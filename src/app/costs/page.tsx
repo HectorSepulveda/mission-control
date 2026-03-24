@@ -103,9 +103,9 @@ export default async function CostsPage() {
   ]
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8 animate-fade-up">
+      <div className="mb-6 md:mb-8 animate-fade-up">
         <h1
           className="text-2xl font-bold"
           style={{
@@ -121,7 +121,7 @@ export default async function CostsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4 md:mb-6">
         {summaryCards.map((card) => {
           const borderColor = {
             orange: 'rgba(230,126,34,0.35)',
