@@ -143,18 +143,11 @@ export default async function AgentsPage() {
             return (
               <div
                 key={agent.id}
-                className="card card-lift"
+                className="card card-lift agent-card"
                 style={{
                   borderColor: 'rgba(255,255,255,0.07)',
-                  transition: 'border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.borderColor = providerGlow(agent.model)
-                  ;(e.currentTarget as HTMLElement).style.boxShadow = `0 8px 32px ${providerGlow(agent.model)}`
-                }}
-                onMouseLeave={(e) => {
-                  ;(e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)'
-                  ;(e.currentTarget as HTMLElement).style.boxShadow = ''
+                  // @ts-ignore
+                  '--provider-glow': providerGlow(agent.model),
                 }}
               >
                 {/* Top row: avatar + info */}

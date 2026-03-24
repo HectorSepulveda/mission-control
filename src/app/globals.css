@@ -239,6 +239,12 @@ body {
     background-clip: text;
   }
 
+  /* Agent card hover glow using CSS variable */
+  .agent-card:hover {
+    border-color: var(--provider-glow) !important;
+    box-shadow: 0 8px 32px var(--provider-glow) !important;
+  }
+
   /* Token progress bar */
   .token-bar {
     height: 3px;
