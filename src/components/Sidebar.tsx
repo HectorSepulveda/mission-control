@@ -29,6 +29,20 @@ const mainNav = [
       <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )},
+  { href: '/office', label: 'The Office', icon: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="1" y="5" width="14" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M4 5V3.5A1.5 1.5 0 015.5 2h5A1.5 1.5 0 0112 3.5V5" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M1 9h14" stroke="currentColor" strokeWidth="1.2" opacity="0.5"/>
+    </svg>
+  )},
+  { href: '/objectives', label: 'Objetivos', icon: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
+      <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.2" opacity="0.6"/>
+      <circle cx="8" cy="8" r="1" fill="currentColor"/>
+    </svg>
+  )},
 ]
 
 const systemNav = [

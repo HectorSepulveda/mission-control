@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { query } from '@/lib/db'
 
 /* ── Types ───────────────────────────────────────────── */
@@ -44,6 +45,15 @@ interface ServiceStatus {
   n8n: boolean
   coolify: boolean
   postgres: boolean
+}
+
+interface TopObjective {
+  id: number
+  title: string
+  current_value: number
+  target_value: number
+  unit: string
+  status: string
 }
 
 /* ── Data fetchers ───────────────────────────────────── */
@@ -143,6 +153,20 @@ async function getRecentEvents(): Promise<Event[]> {
   }
 }
 
+async function getTopObjectives(): Promise<TopObjective[]> {
+  try {
+    return await query<TopObjective>(`
+      SELECT id, title, current_value, target_value, unit, status
+      FROM objectives
+      WHERE project ILIKE '%pettech%' OR project ILIKE '%pet%'
+      ORDER BY type, title
+      LIMIT 3
+    `)
+  } catch {
+    return []
+  }
+}
+
 async function getServiceStatus(): Promise<ServiceStatus> {
   const checkUrl = async (url: string): Promise<boolean> => {
     try {
@@ -216,12 +240,13 @@ function agentStatusLabel(status: string): string {
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  const [summary, agentActivity, budget, events, services] = await Promise.all([
+  const [summary, agentActivity, budget, events, services, topObjectives] = await Promise.all([
     getSummary(),
     getAgentActivity(),
     getBudget(),
     getRecentEvents(),
     getServiceStatus(),
+    getTopObjectives(),
   ])
 
   const now = new Date().toLocaleString('es-CL', {
@@ -535,6 +560,51 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Objetivos Clave ─────────────────────────────── */}
+      {topObjectives.length > 0 && (
+        <div className="card animate-fade-up">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold" style={{ color: '#f1f5f9' }}>
+              🎯 Objetivos Clave
+            </h2>
+            <Link
+              href="/objectives"
+              className="text-xs px-2 py-1 rounded-lg"
+              style={{ color: '#60a5fa', background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.2)' }}
+            >
+              Ver todos →
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {topObjectives.map((obj) => {
+              const pct = obj.target_value > 0 ? Math.min(Math.round((obj.current_value / obj.target_value) * 100), 100) : 0
+              const barColor = pct >= 70 ? '#4ade80' : pct >= 30 ? '#fbbf24' : '#f87171'
+              return (
+                <div key={obj.id}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs font-medium" style={{ color: '#cbd5e1' }}>{obj.title}</span>
+                    <span className="text-xs font-bold" style={{ color: barColor }}>{pct}%</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${pct}%`,
+                        background: `linear-gradient(90deg, ${barColor}, ${barColor}bb)`,
+                        boxShadow: `0 0 4px ${barColor}50`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-[10px] mt-0.5" style={{ color: '#475569' }}>
+                    {obj.current_value.toLocaleString('es-CL')} / {obj.target_value.toLocaleString('es-CL')} {obj.unit}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="flex items-center justify-between mb-4">
