@@ -40,6 +40,7 @@ interface Message {
   to_agent: string | null
   status: string
   content: string
+  message_type: string
 }
 
 interface AgentNodeData {
@@ -51,6 +52,7 @@ interface AgentNodeData {
   is_blocked: boolean
   cost_per_1k_tokens: number | null
   emoji: string
+  hasActiveMsg?: boolean
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -151,9 +153,13 @@ const AGENT_EMOJIS: Record<string, string> = {
 function AgentNode({ data }: NodeProps<AgentNodeData>) {
   const grad = TEAM_GRADIENTS[data.team] || TEAM_GRADIENTS.core
 
+  const hasMsg = data.hasActiveMsg
+
   const borderColor =
     data.is_blocked
       ? '#ef4444'
+      : hasMsg
+      ? '#fb923c'
       : data.status === 'active'
       ? '#22c55e'
       : data.status === 'working'
@@ -161,7 +167,9 @@ function AgentNode({ data }: NodeProps<AgentNodeData>) {
       : 'rgba(255,255,255,0.12)'
 
   const borderAnim =
-    data.status === 'active'
+    hasMsg
+      ? '0 0 8px 3px rgba(251,146,60,0.5)'
+      : data.status === 'active'
       ? '0 0 0 2px rgba(34,197,94,0.4)'
       : data.status === 'working'
       ? '0 0 0 2px rgba(251,146,60,0.4)'
@@ -191,6 +199,11 @@ function AgentNode({ data }: NodeProps<AgentNodeData>) {
         position: 'relative',
         backdropFilter: 'blur(8px)',
         opacity: data.phase > 1 ? 0.6 : 1,
+        animation: hasMsg
+          ? 'msgPulse 1.2s ease-in-out infinite'
+          : data.status === 'active'
+          ? 'activePulse 2s ease-in-out infinite'
+          : 'none',
       }}
     >
       {/* Handles */}
@@ -290,9 +303,18 @@ function AgentNode({ data }: NodeProps<AgentNodeData>) {
 
 // ─── Builder functions ────────────────────────────────────────────────────────
 
-function buildNodes(agents: Agent[]): Node[] {
+function buildNodes(agents: Agent[], messages: Message[] = []): Node[] {
   const nodes: Node[] = []
   let fallbackX = 0
+
+  // Determinar agentes con mensajes activos
+  const activeAgents = new Set<string>()
+  for (const m of messages) {
+    if (m.status === 'pending' || m.status === 'processing') {
+      if (m.from_agent) activeAgents.add(m.from_agent)
+      if (m.to_agent) activeAgents.add(m.to_agent)
+    }
+  }
 
   // Héctor node (not in DB)
   nodes.push({
@@ -308,6 +330,7 @@ function buildNodes(agents: Agent[]): Node[] {
       is_blocked: false,
       cost_per_1k_tokens: null,
       emoji: '👑',
+      hasActiveMsg: activeAgents.has('hector'),
     } as AgentNodeData,
   })
 
@@ -329,6 +352,7 @@ function buildNodes(agents: Agent[]): Node[] {
         is_blocked: agent.is_blocked,
         cost_per_1k_tokens: agent.cost_per_1k_tokens,
         emoji,
+        hasActiveMsg: activeAgents.has(key),
       } as AgentNodeData,
     })
   }
@@ -341,40 +365,66 @@ function buildEdges(agents: Agent[], messages: Message[]): Edge[] {
   const agentKeys = new Set(agents.map((a) => a.agent_key))
   agentKeys.add('hector')
 
-  // Hierarchy edges
+  // Determinar qué pares de agentes tienen mensajes activos
+  const activePairs = new Set<string>()
+  const resultPairs = new Set<string>()
+  for (const m of messages) {
+    if (!m.from_agent || !m.to_agent) continue
+    const pair = `${m.from_agent}→${m.to_agent}`
+    if (m.status === 'pending' || m.status === 'processing') {
+      if (m.message_type === 'result') resultPairs.add(pair)
+      else activePairs.add(pair)
+    }
+  }
+
+  // Hierarchy edges — se iluminan si hay mensaje activo en esa conexión
   for (const e of HIERARCHY_EDGES) {
+    const pair = `${e.source}→${e.target}`
+    const revPair = `${e.target}→${e.source}`
+    const isActive = activePairs.has(pair) || activePairs.has(revPair)
+    const isResult = resultPairs.has(pair) || resultPairs.has(revPair)
+
     edges.push({
       id: `hier-${e.source}-${e.target}`,
       source: e.source,
       target: e.target,
       type: 'smoothstep',
+      animated: isActive || isResult,
       style: {
-        stroke: '#1A6B3C',
-        strokeWidth: 1.5,
-        opacity: 0.4,
+        stroke: isResult ? '#22c55e' : isActive ? '#fb923c' : '#1A6B3C',
+        strokeWidth: isActive || isResult ? 2.5 : 1.5,
+        opacity: isActive || isResult ? 1 : 0.35,
+        strokeDasharray: isActive || isResult ? '8 4' : undefined,
+        filter: isActive || isResult ? `drop-shadow(0 0 4px ${isResult ? '#22c55e' : '#fb923c'})` : undefined,
       },
     })
   }
 
-  // Message edges (animated)
-  const activeMessages = messages.filter(
-    (m) => m.status === 'pending' || m.status === 'read'
-  )
+  // Edges extra para mensajes entre agentes no conectados directamente
+  for (const m of messages) {
+    if (!m.from_agent || !m.to_agent) continue
+    if (!agentKeys.has(m.from_agent) || !agentKeys.has(m.to_agent)) continue
+    if (m.status !== 'pending' && m.status !== 'processing') continue
 
-  for (const msg of activeMessages) {
-    if (!msg.from_agent || !msg.to_agent) continue
-    if (!agentKeys.has(msg.from_agent) || !agentKeys.has(msg.to_agent)) continue
+    // Solo agregar si no es una conexión de jerarquía ya existente
+    const isHier = HIERARCHY_EDGES.some(
+      e => (e.source === m.from_agent && e.target === m.to_agent) ||
+           (e.source === m.to_agent && e.target === m.from_agent)
+    )
+    if (isHier) continue
 
-    const edgeId = `msg-${msg.id}`
+    const color = m.message_type === 'result' ? '#22c55e' : '#fb923c'
     edges.push({
-      id: edgeId,
-      source: msg.from_agent,
-      target: msg.to_agent,
+      id: `msg-${m.id}`,
+      source: m.from_agent,
+      target: m.to_agent,
+      type: 'smoothstep',
       animated: true,
       style: {
-        stroke: '#fb923c',
+        stroke: color,
         strokeWidth: 2.5,
         strokeDasharray: '8 4',
+        filter: `drop-shadow(0 0 5px ${color})`,
       },
     })
   }
@@ -396,7 +446,7 @@ export default function AgentFlowCanvas({
   initialMessages,
 }: AgentFlowCanvasProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(
-    buildNodes(initialAgents)
+    buildNodes(initialAgents, initialMessages)
   )
   const [edges, setEdges, onEdgesChange] = useEdgesState(
     buildEdges(initialAgents, initialMessages)
@@ -412,8 +462,9 @@ export default function AgentFlowCanvas({
       const messages: Message[] = await messagesRes.json()
 
       if (Array.isArray(agents)) {
-        setNodes(buildNodes(agents))
-        setEdges(buildEdges(agents, Array.isArray(messages) ? messages : []))
+        const msgs = Array.isArray(messages) ? messages : []
+        setNodes(buildNodes(agents, msgs))
+        setEdges(buildEdges(agents, msgs))
       }
     } catch {
       // silently skip on network errors
@@ -433,6 +484,19 @@ export default function AgentFlowCanvas({
 
   return (
     <div style={{ width: '100%', height: '100%', background: '#060608' }}>
+      <style>{`
+        @keyframes msgPulse {
+          0%, 100% { box-shadow: 0 0 8px 3px rgba(251,146,60,0.5), 0 0 0 1px rgba(251,146,60,0.6); }
+          50% { box-shadow: 0 0 16px 6px rgba(251,146,60,0.8), 0 0 0 2px rgba(251,146,60,0.9); }
+        }
+        @keyframes activePulse {
+          0%, 100% { box-shadow: 0 0 6px 2px rgba(34,197,94,0.3); }
+          50% { box-shadow: 0 0 12px 5px rgba(34,197,94,0.6); }
+        }
+        .react-flow__edge-path {
+          transition: stroke 0.3s, stroke-width 0.3s, opacity 0.3s;
+        }
+      `}</style>
       <ReactFlow
         nodes={nodes}
         edges={edges}
