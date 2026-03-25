@@ -204,11 +204,9 @@ export default async function AgentsPage() {
               return (
                 <div
                   key={agent.id}
-                  className="card card-lift agent-card"
+                  className="card card-lift"
                   style={{
                     borderColor: 'rgba(255,255,255,0.07)',
-                    // @ts-ignore
-                    '--provider-glow': providerGlow(agent.model),
                   }}
                 >
                   {/* Top row: avatar + info */}
