@@ -56,27 +56,33 @@ interface AgentNodeData {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const NODE_POSITIONS: Record<string, { x: number; y: number }> = {
-  hector: { x: 580, y: 0 },
-  astro: { x: 580, y: 150 },
-  'prompt-engineer': { x: 850, y: 150 },
-  pm: { x: 180, y: 320 },
-  'marketing-lead': { x: 580, y: 320 },
-  cto: { x: 980, y: 320 },
-  strategy: { x: 60, y: 490 },
-  research: { x: 260, y: 490 },
-  seo: { x: 360, y: 490 },
-  'content-writer': { x: 500, y: 490 },
-  'social-media': { x: 640, y: 490 },
-  'image-generator': { x: 780, y: 490 },
-  'email-marketing': { x: 920, y: 490 },
-  'campaign-analyst': { x: 1060, y: 490 },
-  publisher: { x: 1200, y: 490 },
-  backend: { x: 820, y: 490 },
-  pixel: { x: 960, y: 490 },
-  'qa-func': { x: 1100, y: 490 },
-  'qa-tech': { x: 1240, y: 490 },
-  devops: { x: 1380, y: 490 },
-  security: { x: 1520, y: 490 },
+  // Nivel 0 — Héctor
+  hector: { x: 740, y: 0 },
+  // Nivel 1 — Astro + Prompt Engineer
+  astro: { x: 660, y: 170 },
+  'prompt-engineer': { x: 900, y: 170 },
+  // Nivel 2 — Sub-orquestadores (separados horizontalmente)
+  pm: { x: 120, y: 360 },
+  'marketing-lead': { x: 660, y: 360 },
+  cto: { x: 1320, y: 360 },
+  // Nivel 3 — Especialistas Estrategia (bajo PM)
+  strategy: { x: 30, y: 560 },
+  research: { x: 210, y: 560 },
+  // Nivel 3 — Especialistas Marketing (bajo Marketing Lead, separados verticalmente)
+  seo: { x: 380, y: 560 },
+  'content-writer': { x: 560, y: 560 },
+  'social-media': { x: 380, y: 720 },
+  'image-generator': { x: 560, y: 720 },
+  'email-marketing': { x: 740, y: 560 },
+  'campaign-analyst': { x: 740, y: 720 },
+  publisher: { x: 920, y: 640 },
+  // Nivel 3 — Especialistas Dev (bajo CTO)
+  backend: { x: 1100, y: 560 },
+  pixel: { x: 1280, y: 560 },
+  'qa-func': { x: 1460, y: 560 },
+  'qa-tech': { x: 1100, y: 720 },
+  devops: { x: 1280, y: 720 },
+  security: { x: 1460, y: 720 },
 }
 
 const HIERARCHY_EDGES = [
