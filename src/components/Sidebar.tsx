@@ -17,23 +17,21 @@ const mainNav = [
       <path d="M1 3.5A1.5 1.5 0 012.5 2h4l1.5 2H13.5A1.5 1.5 0 0115 5.5v7A1.5 1.5 0 0113.5 14h-11A1.5 1.5 0 011 12.5v-9z" stroke="currentColor" strokeWidth="1.2" fill="none"/>
     </svg>
   )},
-  { href: '/agents', label: 'Agentes', icon: (
+  { href: '/flow', label: 'Factory Flow', icon: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.2"/>
-      <path d="M2 14c0-3.314 2.686-5 6-5s6 1.686 6 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <circle cx="3" cy="3" r="2" stroke="currentColor" strokeWidth="1.2"/>
+      <circle cx="13" cy="3" r="2" stroke="currentColor" strokeWidth="1.2"/>
+      <circle cx="3" cy="13" r="2" stroke="currentColor" strokeWidth="1.2"/>
+      <circle cx="13" cy="13" r="2" stroke="currentColor" strokeWidth="1.2"/>
+      <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M5 3h3M13 5v3M11 13H8M3 11V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+      <path d="M5.4 5.4l1.2 1.2M10.6 10.6l-1.2-1.2M10.6 5.4l-1.2 1.2M5.4 10.6l1.2-1.2" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.6"/>
     </svg>
   )},
   { href: '/tasks', label: 'Tareas', icon: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.2"/>
       <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  )},
-  { href: '/office', label: 'The Office', icon: (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <rect x="1" y="5" width="14" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
-      <path d="M4 5V3.5A1.5 1.5 0 015.5 2h5A1.5 1.5 0 0112 3.5V5" stroke="currentColor" strokeWidth="1.2"/>
-      <path d="M1 9h14" stroke="currentColor" strokeWidth="1.2" opacity="0.5"/>
     </svg>
   )},
   { href: '/objectives', label: 'Objetivos', icon: (
