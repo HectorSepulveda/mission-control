@@ -1,9 +1,9 @@
-'use client'
+import { query } from '@/lib/db'
 
-import { useEffect, useState } from 'react'
+export const dynamic = 'force-dynamic'
 
 interface Objective {
-  id: number
+  id: string
   project: string
   title: string
   type: string
@@ -14,231 +14,106 @@ interface Objective {
   status: string
 }
 
-function progressColor(pct: number): string {
-  if (pct >= 70) return '#4ade80'
-  if (pct >= 30) return '#fbbf24'
+async function getObjectives(): Promise<Objective[]> {
+  try {
+    return await query<Objective>('SELECT * FROM objectives ORDER BY project, type')
+  } catch { return [] }
+}
+
+function pct(current: number, target: number): number {
+  if (!target) return 0
+  return Math.min(Math.round((current / target) * 100), 100)
+}
+
+function barColor(p: number): string {
+  if (p >= 70) return '#4ade80'
+  if (p >= 30) return '#fbbf24'
   return '#f87171'
 }
 
-function statusColor(status: string): { bg: string; color: string } {
-  switch (status?.toLowerCase()) {
-    case 'completed': return { bg: 'rgba(74,222,128,0.12)', color: '#4ade80' }
-    case 'active': case 'in_progress': return { bg: 'rgba(96,165,250,0.12)', color: '#60a5fa' }
-    case 'at_risk': return { bg: 'rgba(251,146,60,0.12)', color: '#fb923c' }
-    case 'behind': return { bg: 'rgba(239,68,68,0.12)', color: '#f87171' }
-    default: return { bg: 'rgba(148,163,184,0.1)', color: '#94a3b8' }
-  }
-}
-
-function formatDeadline(dateStr: string | null): string {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
 function typeLabel(type: string): string {
-  switch (type) {
-    case 'okr': return 'OKR'
-    case 'kpi': return 'KPI'
-    case 'milestone': return 'Hito'
-    case 'revenue': return 'Revenue'
-    default: return type
-  }
+  return { okr: 'OKR', kpi: 'KPI', milestone: 'Hito' }[type] || type.toUpperCase()
 }
 
-export default function ObjectivesPage() {
-  const [objectives, setObjectives] = useState<Objective[]>([])
-  const [loading, setLoading] = useState(true)
+function formatDeadline(d: string | null): string {
+  if (!d) return '—'
+  return new Date(d).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })
+}
 
-  useEffect(() => {
-    fetch('/api/objectives')
-      .then(r => r.json())
-      .then(data => {
-        setObjectives(data)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [])
+const PROJECT_LABELS: Record<string, string> = {
+  pettech: '🐾 PetTech Chile',
+  general: '⭐ General',
+  bottrading: '📈 botTrading',
+}
 
-  // Group by project
-  const projects = Array.from(new Set(objectives.map(o => o.project))).sort()
+export default async function ObjectivesPage() {
+  const objectives = await getObjectives()
+
+  const grouped = objectives.reduce((acc, obj) => {
+    acc[obj.project] = acc[obj.project] || []
+    acc[obj.project].push(obj)
+    return acc
+  }, {} as Record<string, Objective[]>)
 
   return (
-    <div style={{ padding: '24px', maxWidth: 1100, margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{
-          fontSize: 28,
-          fontWeight: 800,
-          background: 'linear-gradient(135deg, #22c55e, #34d399 50%, #fb923c)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-        }}>
-          🎯 Objetivos
-        </h1>
-        <p style={{ color: '#64748b', fontSize: 13, marginTop: 4 }}>
-          OKRs y KPIs del negocio
-        </p>
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Objetivos 🎯</h1>
+        <p className="text-sm text-gray-500 mt-1">{objectives.length} objetivos activos</p>
       </div>
 
-      {loading ? (
-        <div style={{ padding: '80px 0', textAlign: 'center', color: '#475569', fontSize: 14 }}>
-          Cargando objetivos...
-        </div>
-      ) : objectives.length === 0 ? (
-        <div style={{
-          padding: '80px 0',
-          textAlign: 'center',
-          color: '#475569',
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
-          <p style={{ fontSize: 14, fontWeight: 500 }}>Sin objetivos registrados</p>
-          <p style={{ fontSize: 12, marginTop: 4, color: '#334155' }}>Agrega registros en la tabla <code>objectives</code></p>
+      {Object.keys(grouped).length === 0 ? (
+        <div className="card text-center py-16">
+          <div className="text-4xl mb-3">🎯</div>
+          <p className="text-gray-500">No hay objetivos definidos aún</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-          {projects.map(project => {
-            const projectObjs = objectives.filter(o => o.project === project)
-            const completedCount = projectObjs.filter(o => {
-              const pct = o.target_value > 0 ? (o.current_value / o.target_value) * 100 : 0
-              return pct >= 100
-            }).length
-
-            return (
-              <div key={project}>
-                {/* Project header */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 12,
-                }}>
-                  <h2 style={{ fontSize: 16, fontWeight: 700, color: '#f1f5f9' }}>
-                    {project}
-                  </h2>
-                  <span style={{
-                    fontSize: 11,
-                    color: '#64748b',
-                    padding: '2px 10px',
-                    borderRadius: 99,
-                    background: 'rgba(100,116,139,0.1)',
-                    border: '1px solid rgba(100,116,139,0.2)',
-                  }}>
-                    {completedCount}/{projectObjs.length} completados
-                  </span>
-                </div>
-
-                {/* Objectives grid */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                  gap: 12,
-                }}>
-                  {projectObjs.map(obj => {
-                    const pct = obj.target_value > 0
-                      ? Math.min(Math.round((obj.current_value / obj.target_value) * 100), 100)
-                      : 0
-                    const barColor = progressColor(pct)
-                    const sc = statusColor(obj.status)
-
-                    return (
-                      <div
-                        key={obj.id}
-                        style={{
-                          background: 'rgba(255,255,255,0.025)',
-                          border: '1px solid rgba(255,255,255,0.07)',
-                          borderRadius: 14,
-                          padding: '16px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 12,
-                        }}
-                      >
-                        {/* Top row */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9', lineHeight: 1.3 }}>
-                              {obj.title}
-                            </p>
-                            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                              <span style={{
-                                fontSize: 10,
-                                fontWeight: 600,
-                                padding: '1px 6px',
-                                borderRadius: 99,
-                                background: 'rgba(129,140,248,0.12)',
-                                color: '#818cf8',
-                                border: '1px solid rgba(129,140,248,0.25)',
-                              }}>
-                                {typeLabel(obj.type)}
-                              </span>
-                              <span style={{
-                                fontSize: 10,
-                                fontWeight: 600,
-                                padding: '1px 6px',
-                                borderRadius: 99,
-                                background: sc.bg,
-                                color: sc.color,
-                                border: `1px solid ${sc.color}30`,
-                              }}>
-                                {obj.status}
-                              </span>
-                            </div>
+        <div className="space-y-6">
+          {Object.entries(grouped).map(([project, objs]) => (
+            <div key={project} className="card">
+              <h2 className="text-base font-semibold text-white mb-4">
+                {PROJECT_LABELS[project] || project}
+              </h2>
+              <div className="space-y-4">
+                {objs.map(obj => {
+                  const p = pct(obj.current_value, obj.target_value)
+                  const color = barColor(p)
+                  return (
+                    <div key={obj.id} className="p-3 rounded-lg border border-dark-border bg-dark-bg/50">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="text-sm font-medium text-white">{obj.title}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded border"
+                              style={{ color: '#818cf8', borderColor: 'rgba(129,140,248,0.3)', background: 'rgba(129,140,248,0.1)' }}>
+                              {typeLabel(obj.type)}
+                            </span>
                           </div>
-                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                            <p style={{ fontSize: 22, fontWeight: 800, color: barColor, lineHeight: 1 }}>
-                              {pct}%
-                            </p>
-                          </div>
+                          {obj.deadline && (
+                            <p className="text-[11px] text-gray-600">📅 {formatDeadline(obj.deadline)}</p>
+                          )}
                         </div>
-
-                        {/* Progress bar */}
-                        <div>
-                          <div style={{
-                            height: 6,
-                            borderRadius: 99,
-                            background: 'rgba(255,255,255,0.06)',
-                            overflow: 'hidden',
-                          }}>
-                            <div style={{
-                              height: '100%',
-                              width: `${pct}%`,
-                              borderRadius: 99,
-                              background: `linear-gradient(90deg, ${barColor}, ${barColor}bb)`,
-                              boxShadow: `0 0 6px ${barColor}60`,
-                              transition: 'width 0.5s ease',
-                            }} />
-                          </div>
-                          <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            marginTop: 4,
-                          }}>
-                            <span style={{ fontSize: 11, color: '#64748b' }}>
-                              {obj.current_value.toLocaleString('es-CL')} {obj.unit}
-                            </span>
-                            <span style={{ fontSize: 11, color: '#475569' }}>
-                              / {obj.target_value.toLocaleString('es-CL')} {obj.unit}
-                            </span>
-                          </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-xl font-bold leading-none" style={{ color }}>{p}%</p>
                         </div>
-
-                        {/* Deadline */}
-                        {obj.deadline && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span style={{ fontSize: 11, color: '#475569' }}>📅</span>
-                            <span style={{ fontSize: 11, color: '#475569' }}>
-                              Deadline: {formatDeadline(obj.deadline)}
-                            </span>
-                          </div>
-                        )}
                       </div>
-                    )
-                  })}
-                </div>
+
+                      {/* Barra */}
+                      <div className="h-1.5 rounded-full bg-dark-muted/30 overflow-hidden mb-1">
+                        <div className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${p}%`, background: `linear-gradient(90deg, ${color}, ${color}bb)`, boxShadow: `0 0 6px ${color}60` }} />
+                      </div>
+
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-gray-500">{obj.current_value.toLocaleString('es-CL')} {obj.unit}</span>
+                        <span className="text-gray-600">Meta: {obj.target_value.toLocaleString('es-CL')} {obj.unit}</span>
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
       )}
     </div>
