@@ -1,5 +1,4 @@
-import { query } from '@/lib/db'
-import Link from 'next/link'
+export const dynamic = 'force-dynamic'
 
 interface Agent {
   id: string
@@ -14,13 +13,16 @@ interface Agent {
   cost_per_1k_tokens: number | null
 }
 
-async function getAgents(): Promise<Agent[]> {
-  try {
-    return await query<Agent>(`SELECT * FROM agents ORDER BY cost_per_1k_tokens DESC NULLS LAST`)
-  } catch {
-    return []
-  }
-}
+// Datos inline de fallback — la página siempre muestra algo
+const AGENTS_FALLBACK: Agent[] = []
+
+const COST_EXAMPLES = [
+  { task: 'Análisis de arquitectura (4k tokens)', agent: 'CTO Agent', cost: '~$0.060' },
+  { task: 'Escribir componente (2k tokens)', agent: 'Dev Agent', cost: '~$0.006' },
+  { task: 'Revisar QA (1k tokens)', agent: 'QA Agent', cost: '~$0.001' },
+  { task: 'Post Instagram (500 tokens)', agent: 'Marketing', cost: '~$0.0015' },
+  { task: 'Buscar tendencias (1k tokens)', agent: 'Research', cost: '~$0.0001' },
+]
 
 function roleEmoji(role: string): string {
   const r = (role || '').toLowerCase()
@@ -30,7 +32,6 @@ function roleEmoji(role: string): string {
   if (r.includes('market') || r.includes('content')) return '📣'
   if (r.includes('research')) return '🔍'
   if (r.includes('manager') || r.includes('pm')) return '📋'
-  if (r.includes('astro') || r.includes('orquest')) return '⭐'
   return '🤖'
 }
 
@@ -60,29 +61,29 @@ function providerInfo(model: string): { name: string; color: string } {
   return { name: model || '—', color: '#94a3b8' }
 }
 
-function costTier(cost: number | null): { label: string; color: string } {
-  if (!cost) return { label: 'Gratis', color: '#94a3b8' }
-  if (cost >= 0.01) return { label: `$${cost.toFixed(3)}/1k · Premium`, color: '#f97316' }
-  if (cost >= 0.002) return { label: `$${cost.toFixed(3)}/1k · Standard`, color: '#60a5fa' }
-  if (cost >= 0.0005) return { label: `$${cost.toFixed(4)}/1k · Económico`, color: '#4ade80' }
-  return { label: `$${cost.toFixed(4)}/1k · Ultra-eco`, color: '#34d399' }
+function costLabel(cost: number | null): string {
+  if (!cost) return ''
+  if (cost >= 0.01) return `$${cost.toFixed(3)}/1k · Premium`
+  if (cost >= 0.002) return `$${cost.toFixed(3)}/1k · Standard`
+  if (cost >= 0.0005) return `$${cost.toFixed(4)}/1k · Económico`
+  return `$${cost.toFixed(4)}/1k · Ultra-eco`
 }
 
-function parseSkills(skills: string[] | null): string[] {
-  if (!skills) return []
-  if (Array.isArray(skills)) return skills.slice(0, 4)
-  return []
+function costColor(cost: number | null): string {
+  if (!cost) return '#94a3b8'
+  if (cost >= 0.01) return '#f97316'
+  if (cost >= 0.002) return '#60a5fa'
+  return '#4ade80'
 }
 
-export const dynamic = 'force-dynamic'
-
-const COST_EXAMPLES = [
-  { task: 'Análisis de arquitectura (4k tokens)', agent: 'CTO Agent', cost: '~$0.060' },
-  { task: 'Escribir componente (2k tokens)', agent: 'Dev Agent', cost: '~$0.006' },
-  { task: 'Revisar QA (1k tokens)', agent: 'QA Agent', cost: '~$0.001' },
-  { task: 'Post Instagram (500 tokens)', agent: 'Marketing', cost: '~$0.0015' },
-  { task: 'Buscar tendencias (1k tokens)', agent: 'Research', cost: '~$0.0001' },
-]
+async function getAgents(): Promise<Agent[]> {
+  try {
+    const { query } = await import('@/lib/db')
+    return await query<Agent>('SELECT * FROM agents ORDER BY cost_per_1k_tokens DESC NULLS LAST')
+  } catch {
+    return AGENTS_FALLBACK
+  }
+}
 
 export default async function AgentsPage() {
   const agents = await getAgents()
@@ -90,74 +91,62 @@ export default async function AgentsPage() {
 
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Agentes 🤖</h1>
-          <p className="text-sm text-gray-500 mt-1">{agents.length} registrados · {active} activos ahora</p>
+          <p className="text-sm text-gray-500 mt-1">{agents.length} registrados · {active} activos</p>
         </div>
-        <span className="px-3 py-1.5 rounded-lg text-xs font-medium badge-green">
-          {active} activos
-        </span>
+        <span className="badge-green text-xs px-3 py-1.5">{active} activos</span>
       </div>
 
-      {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {agents.map((agent) => {
           const provider = providerInfo(agent.model)
-          const cost = costTier(agent.cost_per_1k_tokens)
-          const skills = parseSkills(agent.skills)
           const tokenPct = Math.min(((agent.tokens_used || 0) / 100000) * 100, 100)
           const isActive = agent.status === 'active'
           const isWorking = agent.status === 'working'
+          const skills: string[] = Array.isArray(agent.skills) ? agent.skills.slice(0, 4) : []
 
           return (
             <div key={agent.id} className="card hover:border-brand-green/30 transition-all duration-200">
-              {/* Avatar + name */}
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                  style={{ background: 'linear-gradient(135deg, #1A6B3C, #22c55e)' }}>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0 bg-brand-green/20">
                   {roleEmoji(agent.role)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="font-semibold text-sm text-white leading-tight">{agent.name}</h3>
+                      <h3 className="font-semibold text-sm text-white">{agent.name}</h3>
                       <p className="text-xs text-gray-500 mt-0.5">{agent.role}</p>
                     </div>
-                    <span className="text-xs font-mono shrink-0" style={{ color: cost.color }}>
-                      {cost.label.split(' · ')[0]}
-                    </span>
+                    {agent.cost_per_1k_tokens && (
+                      <span className="text-[10px] font-mono shrink-0" style={{ color: costColor(agent.cost_per_1k_tokens) }}>
+                        {costLabel(agent.cost_per_1k_tokens).split(' · ')[0]}
+                      </span>
+                    )}
                   </div>
                   {skills.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {skills.map(s => (
-                        <span key={s} className="text-[9px] px-1.5 py-0.5 rounded-full bg-dark-muted/30 text-gray-500 border border-dark-border">
-                          {s}
-                        </span>
+                        <span key={s} className="text-[9px] px-1.5 py-0.5 rounded-full bg-dark-muted/30 text-gray-500 border border-dark-border">{s}</span>
                       ))}
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Personalidad */}
               {agent.personality && (
-                <p className="text-xs text-gray-500 mb-3 line-clamp-2 leading-relaxed">{agent.personality}</p>
+                <p className="text-xs text-gray-500 mb-3 line-clamp-2">{agent.personality}</p>
               )}
 
-              {/* Status */}
               <div className="mb-3">
-                <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium ${
-                  isActive ? 'badge-green' : isWorking ? 'badge-orange working-badge' : 'badge-gray'
-                }`}>
+                <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium ${isActive ? 'badge-green' : isWorking ? 'badge-orange working-badge' : 'badge-gray'}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-green-400' : isWorking ? 'bg-orange-400' : 'bg-gray-600'}`} />
                   {isActive ? '● Activo' : isWorking ? '⚡ Trabajando' : '○ En espera'}
                 </span>
                 <p className="text-[10px] text-gray-700 mt-1">Solo se activa cuando hay tarea asignada</p>
               </div>
 
-              {/* Token bar */}
               <div className="mb-3">
                 <div className="flex justify-between text-[10px] text-gray-600 mb-1">
                   <span>Tokens usados</span>
@@ -168,7 +157,6 @@ export default async function AgentsPage() {
                 </div>
               </div>
 
-              {/* Footer */}
               <div className="flex items-center justify-between pt-3 border-t border-dark-border">
                 <span className="text-[10px] font-medium px-2 py-0.5 rounded border"
                   style={{ color: provider.color, borderColor: `${provider.color}40`, background: `${provider.color}15` }}>
@@ -181,7 +169,6 @@ export default async function AgentsPage() {
         })}
       </div>
 
-      {/* Cost estimator */}
       <div className="card">
         <h2 className="text-sm font-semibold text-white mb-4">💡 Costo estimado por tipo de tarea</h2>
         <div className="overflow-x-auto">
@@ -197,9 +184,7 @@ export default async function AgentsPage() {
               {COST_EXAMPLES.map((row, i) => (
                 <tr key={i} className={i < COST_EXAMPLES.length - 1 ? 'border-b border-dark-border/40' : ''}>
                   <td className="py-2.5 pr-4 text-gray-400">{row.task}</td>
-                  <td className="py-2.5 pr-4">
-                    <span className="badge-gray text-[10px]">{row.agent}</span>
-                  </td>
+                  <td className="py-2.5 pr-4"><span className="badge-gray text-[10px]">{row.agent}</span></td>
                   <td className="py-2.5 text-right font-mono font-semibold text-green-400">{row.cost}</td>
                 </tr>
               ))}
