@@ -1,6 +1,6 @@
-'use client'
+import { query } from '@/lib/db'
 
-import { useEffect, useState } from 'react'
+export const dynamic = 'force-dynamic'
 
 interface Agent {
   id: string
@@ -13,6 +13,18 @@ interface Agent {
   personality: string | null
   skills: string[] | null
   cost_per_1k_tokens: number | null
+}
+
+async function getAgents(): Promise<Agent[]> {
+  try {
+    return await query<Agent>(`
+      SELECT id, name, role, model, status,
+             COALESCE(tokens_used,0) as tokens_used,
+             last_active, personality, skills, cost_per_1k_tokens
+      FROM agents ORDER BY
+        CASE status WHEN 'active' THEN 0 WHEN 'working' THEN 1 ELSE 2 END, name
+    `)
+  } catch { return [] }
 }
 
 const COST_EXAMPLES = [
@@ -31,6 +43,7 @@ function roleEmoji(role: string) {
   if (r.includes('market') || r.includes('content')) return '📣'
   if (r.includes('research')) return '🔍'
   if (r.includes('manager') || r.includes('pm')) return '📋'
+  if (r.includes('image') || r.includes('visual')) return '🎨'
   return '🤖'
 }
 
@@ -67,18 +80,8 @@ function costColor(cost: number | null) {
   return '#4ade80'
 }
 
-export default function AgentsPage() {
-  const [agents, setAgents] = useState<Agent[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/agents')
-      .then(r => r.json())
-      .then(d => setAgents(Array.isArray(d) ? d : []))
-      .catch(() => setAgents([]))
-      .finally(() => setLoading(false))
-  }, [])
-
+export default async function AgentsPage() {
+  const agents = await getAgents()
   const active = agents.filter(a => a.status === 'active' || a.status === 'working').length
 
   return (
@@ -87,14 +90,17 @@ export default function AgentsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Agentes 🤖</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {loading ? 'Cargando...' : `${agents.length} registrados · ${active} activos`}
+            {agents.length} registrados · {active} activos
           </p>
         </div>
-        {!loading && <span className="badge-green text-xs px-3 py-1.5">{active} activos</span>}
+        <span className="badge-green text-xs px-3 py-1.5">{active} activos</span>
       </div>
 
-      {loading ? (
-        <div className="text-center py-20 text-gray-500 text-sm">Cargando agentes...</div>
+      {agents.length === 0 ? (
+        <div className="card text-center py-16">
+          <div className="text-4xl mb-3">🤖</div>
+          <p className="text-gray-500 text-sm">No hay agentes registrados</p>
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
@@ -138,7 +144,7 @@ export default function AgentsPage() {
                   )}
 
                   <div className="mb-3">
-                    <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium ${isActive ? 'badge-green' : isWorking ? 'badge-orange working-badge' : 'badge-gray'}`}>
+                    <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full font-medium ${isActive ? 'badge-green' : isWorking ? 'badge-orange' : 'badge-gray'}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-green-400' : isWorking ? 'bg-orange-400' : 'bg-gray-600'}`} />
                       {isActive ? '● Activo' : isWorking ? '⚡ Trabajando' : '○ En espera'}
                     </span>
