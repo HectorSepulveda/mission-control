@@ -4,6 +4,36 @@ import Anthropic from '@anthropic-ai/sdk'
 
 export const dynamic = 'force-dynamic'
 
+// Agentes que son leads y pueden delegar
+const LEAD_AGENTS = new Set(['pm', 'marketing-lead', 'cto'])
+
+// Especialistas disponibles por lead
+const LEAD_SPECIALISTS: Record<string, string[]> = {
+  'pm': ['strategy', 'research'],
+  'marketing-lead': ['seo', 'content-writer', 'social-media', 'image-generator', 'email-marketing'],
+  'cto': ['backend', 'pixel', 'qa-func', 'qa-tech', 'devops', 'security'],
+}
+
+// Instrucción de delegación que se agrega al prompt de los leads
+function getDelegationInstruction(agentKey: string): string {
+  const specialists = LEAD_SPECIALISTS[agentKey] || []
+  return `
+
+Al final de tu respuesta, SIEMPRE incluye un bloque JSON de delegación con este formato exacto:
+\`\`\`delegation
+{
+  "delegations": [
+    { "to": "<specialist_key>", "brief": "<instrucción específica para ese especialista>" }
+  ]
+}
+\`\`\`
+
+Especialistas disponibles para delegar: ${specialists.join(', ')}
+- Si una tarea no requiere especialistas, usa: { "delegations": [] }
+- Cada brief debe ser autónomo y específico — el especialista no tiene otro contexto.
+- Máximo 3 especialistas por tarea.`
+}
+
 // Prompts base por rol de agente
 const AGENT_PROMPTS: Record<string, string> = {
   pm: `Eres el PM Agent de la Software Factory de Héctor. Tu rol es planificar, priorizar y coordinar el equipo de estrategia.
@@ -58,6 +88,30 @@ Responde con lista de casos de prueba, pasos de reproducción y criterios de ace
 Responde con asunto, preview text, estructura del email y CTA. Español chileno. Máximo 400 tokens.`,
 }
 
+// Parsea el bloque ```delegation ... ``` de la respuesta del lead
+function parseDelegations(text: string): Array<{ to: string; brief: string }> {
+  const match = text.match(/```delegation\s*([\s\S]*?)```/)
+  if (!match) return []
+  try {
+    const json = JSON.parse(match[1].trim())
+    if (!Array.isArray(json.delegations)) return []
+    return json.delegations.filter(
+      (d: unknown) =>
+        d &&
+        typeof d === 'object' &&
+        typeof (d as Record<string, unknown>).to === 'string' &&
+        typeof (d as Record<string, unknown>).brief === 'string'
+    )
+  } catch {
+    return []
+  }
+}
+
+// Limpia el bloque ```delegation``` del texto de resultado visible
+function cleanResult(text: string): string {
+  return text.replace(/```delegation[\s\S]*?```/g, '').trim()
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { message_id } = await req.json()
@@ -97,15 +151,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Construir el system prompt
+    // 5. Construir el system prompt (leads reciben instrucción de delegación)
+    const isLead = LEAD_AGENTS.has(msg.to_agent)
     const basePrompt = AGENT_PROMPTS[msg.to_agent] || agent.personality || `Eres ${agent.name}. Responde en español.`
-    const systemPrompt = `${basePrompt}\n\nEres parte de la Software Factory de Héctor Sepúlveda, emprendedor chileno.`
+    const delegationBlock = isLead ? getDelegationInstruction(msg.to_agent) : ''
+    const systemPrompt = `${basePrompt}${delegationBlock}\n\nEres parte de la Software Factory de Héctor Sepúlveda, emprendedor chileno.`
 
     // 6. Llamar al modelo del agente
     const apiKey = process.env.ANTHROPIC_API_KEY!
     const client = new Anthropic({ apiKey })
 
-    // Usar el modelo del agente (defaultear a haiku si es desconocido)
     let model = 'claude-haiku-4-5'
     if (agent.model?.includes('sonnet')) model = 'claude-sonnet-4-6'
     else if (agent.model?.includes('opus')) model = 'claude-opus-4-6'
@@ -115,48 +170,91 @@ export async function POST(req: NextRequest) {
 
     const response = await client.messages.create({
       model,
-      max_tokens: 600,
+      max_tokens: isLead ? 800 : 600,  // leads necesitan más tokens para el bloque JSON
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }]
     })
 
-    const result = response.content[0].type === 'text' ? response.content[0].text : ''
+    const rawResult = response.content[0].type === 'text' ? response.content[0].text : ''
     const tokens = response.usage.input_tokens + response.usage.output_tokens
 
-    // 7. Guardar resultado en agent_messages como respuesta
+    // 7. Si es lead: parsear delegaciones y crear mensajes para especialistas
+    let delegationsCreated = 0
+    if (isLead) {
+      const delegations = parseDelegations(rawResult)
+      const validSpecialists = LEAD_SPECIALISTS[msg.to_agent] || []
+
+      for (const delegation of delegations) {
+        if (!validSpecialists.includes(delegation.to)) continue  // seguridad: solo especialistas permitidos
+
+        await query(
+          `INSERT INTO agent_messages (from_agent, to_agent, task_id, message_type, content, payload, status)
+           VALUES ($1, $2, $3, 'handoff', $4, $5, 'pending')`,
+          [
+            msg.to_agent,
+            delegation.to,
+            msg.task_id,
+            delegation.brief,
+            JSON.stringify({
+              delegated_by: msg.to_agent,
+              parent_message_id: message_id,
+              original_request: msg.content.slice(0, 300)
+            })
+          ]
+        )
+        delegationsCreated++
+      }
+    }
+
+    // 8. Guardar resultado limpio en agent_messages como respuesta a astro
+    const cleanedResult = isLead ? cleanResult(rawResult) : rawResult
+    const resultContent = isLead && delegationsCreated > 0
+      ? `[${agent.name}] Plan listo. Delegando a ${delegationsCreated} especialista(s).\n\n${cleanedResult.slice(0, 400)}`
+      : `[${agent.name}] ${cleanedResult.slice(0, 500)}`
+
     await query(
       `INSERT INTO agent_messages (from_agent, to_agent, task_id, message_type, content, payload, status)
        VALUES ($1, 'astro', $2, 'result', $3, $4, 'pending')`,
       [
         msg.to_agent,
         msg.task_id,
-        `[${agent.name}] ${result.slice(0, 500)}`,
-        JSON.stringify({ full_result: result, tokens_used: tokens, original_message_id: message_id })
+        resultContent,
+        JSON.stringify({
+          full_result: cleanedResult,
+          tokens_used: tokens,
+          original_message_id: message_id,
+          delegations_created: delegationsCreated,
+          is_lead: isLead
+        })
       ]
     )
 
-    // 8. Actualizar la tarea con el output
+    // 9. Actualizar la tarea con el output
     if (msg.task_id) {
       await query(
         `UPDATE tasks SET pipeline_output = pipeline_output || $1::jsonb, updated_at = now()
          WHERE id = $2`,
-        [JSON.stringify({ [msg.to_agent]: result.slice(0, 1000) }), msg.task_id]
+        [JSON.stringify({ [msg.to_agent]: cleanedResult.slice(0, 1000) }), msg.task_id]
       )
     }
 
-    // 9. Marcar mensaje original como procesado
+    // 10. Marcar mensaje original como procesado
     await query(`UPDATE agent_messages SET status = 'processed' WHERE id = $1`, [message_id])
 
-    // 10. Actualizar actividad del agente
+    // 11. Actualizar actividad del agente
+    const stepLabel = isLead && delegationsCreated > 0
+      ? `Delegando a ${delegationsCreated} especialista(s)`
+      : 'Completado'
+
     await query(
       `INSERT INTO agent_activity (agent_id, project, task_title, current_step, status, tokens_this_task, started_at, updated_at)
-       VALUES ($1, 'pettech', $2, 'Completado', 'active', $3, NOW(), NOW())
+       VALUES ($1, 'pettech', $2, $3, 'active', $4, NOW(), NOW())
        ON CONFLICT (agent_id) DO UPDATE SET
-         current_step = 'Completado', status = 'active', tokens_this_task = $3, updated_at = NOW()`,
-      [msg.to_agent, msg.content.slice(0, 60), tokens]
+         current_step = $3, status = 'active', tokens_this_task = $4, updated_at = NOW()`,
+      [msg.to_agent, msg.content.slice(0, 60), stepLabel, tokens]
     )
 
-    // 11. Registrar tokens
+    // 12. Registrar tokens
     await query(
       `INSERT INTO token_usage (agent_id, provider, model, input_tokens, output_tokens, cost_usd, project, phase, created_at)
        VALUES ($1, 'anthropic', $2, $3, $4, $5, 'pettech', 'operation', NOW())`,
@@ -170,9 +268,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       agent: agent.name,
+      is_lead: isLead,
       model,
       tokens_used: tokens,
-      result_preview: result.slice(0, 200)
+      delegations_created: delegationsCreated,
+      result_preview: cleanedResult.slice(0, 200)
     })
 
   } catch (err) {
