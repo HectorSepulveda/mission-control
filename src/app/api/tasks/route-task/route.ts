@@ -122,8 +122,8 @@ Responde SOLO con el JSON: {"category": "dev|marketing|strategy|research|simple"
 
     // Actualizar actividad de Astro
     await query(
-      `INSERT INTO agent_activity (agent_id, agent_name, project, task_title, current_step, status, tokens_this_task, started_at, updated_at)
-       VALUES ('astro', 'Astro', $1, $2, 'Enrutando tarea', 'active', $3, NOW(), NOW())
+      `INSERT INTO agent_activity (agent_id, project, task_title, current_step, status, tokens_this_task, started_at, updated_at)
+       VALUES ('astro', $1, $2, 'Enrutando tarea', 'active', $3, NOW(), NOW())
        ON CONFLICT (agent_id) DO UPDATE SET
          project=$1, task_title=$2, current_step='Enrutando tarea',
          status='active', tokens_this_task=$3, updated_at=NOW()`,
