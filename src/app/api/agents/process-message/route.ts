@@ -129,6 +129,20 @@ export async function POST(req: NextRequest) {
     // 2. Marcar como "en proceso" para evitar doble ejecución
     await query(`UPDATE agent_messages SET status = 'processing' WHERE id = $1`, [message_id])
 
+    // 2b. Marcar agente como "working" en tiempo real (visible en dashboard antes de que responda)
+    await query(
+      `INSERT INTO agent_activity (agent_id, project, task_title, current_step, status, tokens_this_task, started_at, updated_at)
+       VALUES ($1, 'pettech', $2, 'Procesando...', 'working', 0, NOW(), NOW())
+       ON CONFLICT (agent_id) DO UPDATE SET
+         current_step = 'Procesando...', status = 'working', updated_at = NOW()`,
+      [msg.to_agent, msg.content.slice(0, 60)]
+    )
+    // También actualizar la tabla agents para que el polling de la página /agents lo refleje
+    await query(
+      `UPDATE agents SET status = 'working', last_active = NOW() WHERE agent_key = $1`,
+      [msg.to_agent]
+    )
+
     // 3. Cargar el agente destino
     const agents = await query<{
       agent_key: string; name: string; model: string; personality: string
