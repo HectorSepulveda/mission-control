@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { query } from '@/lib/db'
+import LiveAgentsWidget from '@/components/LiveAgentsWidget'
 
 /* ── Types ───────────────────────────────────────────── */
 interface SummaryData {
@@ -368,111 +369,8 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* ── FILA 2: Agentes EN ESTE MOMENTO ────────────── */}
-      <div className="card animate-fade-up" style={{ animationDelay: '0.05s' }}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold" style={{ color: '#f1f5f9' }}>
-            🤖 Agentes Ahora
-          </h2>
-          <span
-            className="text-xs px-2 py-1 rounded-lg font-medium"
-            style={{ background: 'rgba(74,222,128,0.1)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.2)' }}
-          >
-            {agentActivity.filter(a => a.status === 'active' || a.status === 'working').length} activos
-          </span>
-        </div>
-
-        {agentActivity.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10" style={{ color: '#475569' }}>
-            <div className="text-4xl mb-3 animate-float">😴</div>
-            <p className="text-sm font-medium" style={{ color: '#64748b' }}>Sin actividad de agentes</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {agentActivity.map((agent) => {
-              const isActive = agent.status === 'active' || agent.status === 'working'
-              const statusColor = agentStatusColor(agent.status)
-              return (
-                <div
-                  key={agent.id}
-                  className="flex items-start gap-3 p-3 rounded-xl"
-                  style={{
-                    background: isActive ? 'rgba(255,255,255,0.035)' : 'rgba(255,255,255,0.015)',
-                    border: `1px solid ${isActive ? `${statusColor}25` : 'rgba(255,255,255,0.06)'}`,
-                  }}
-                >
-                  {/* Avatar */}
-                  <div
-                    className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-bold relative"
-                    style={{
-                      background: isActive
-                        ? `linear-gradient(135deg, ${statusColor}30, ${statusColor}15)`
-                        : 'rgba(100,116,139,0.15)',
-                      border: `1px solid ${statusColor}40`,
-                    }}
-                  >
-                    {agentInitial(agent.agent_name || agent.agent_id)}
-                    {isActive && (
-                      <span
-                        className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full dot-pulse"
-                        style={{ background: statusColor }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold" style={{ color: '#f1f5f9' }}>
-                        {agent.agent_name || agent.agent_id}
-                      </span>
-                      <span
-                        className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
-                        style={{ color: statusColor, background: `${statusColor}18`, border: `1px solid ${statusColor}35` }}
-                      >
-                        {agentStatusLabel(agent.status)}
-                      </span>
-                      <span
-                        className="text-[10px] px-1.5 py-0.5 rounded"
-                        style={{ color: '#94a3b8', background: 'rgba(148,163,184,0.08)' }}
-                      >
-                        {agent.project}
-                      </span>
-                    </div>
-
-                    {isActive ? (
-                      <>
-                        <p className="text-xs mt-1 font-medium" style={{ color: '#cbd5e1' }}>
-                          {agent.task_title || 'Tarea sin título'}
-                        </p>
-                        {agent.current_step && (
-                          <p className="text-xs mt-0.5" style={{ color: '#64748b' }}>
-                            ↳ {agent.current_step}
-                          </p>
-                        )}
-                      </>
-                    ) : (
-                      <p className="text-xs mt-1" style={{ color: '#475569' }}>
-                        Último trabajo: {agent.task_title || '—'} — {timeAgo(agent.updated_at)}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Right side */}
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-[10px]" style={{ color: '#475569' }}>{timeAgo(agent.started_at)}</p>
-                    {agent.tokens_this_task > 0 && (
-                      <p className="text-[10px] mt-0.5" style={{ color: '#64748b' }}>
-                        {formatNumber(agent.tokens_this_task)} tok
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+      {/* ── FILA 2: Agentes EN ESTE MOMENTO — live polling ── */}
+      <LiveAgentsWidget />
 
       {/* ── FILA 3: Stats cards ─────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
