@@ -132,14 +132,14 @@ Responde SOLO con el JSON: {"category": "dev|marketing|strategy|research|simple"
 
     // Registrar tokens usados
     await query(
-      `INSERT INTO token_usage (agent_id, task_id, model, input_tokens, output_tokens, total_tokens, cost_usd, phase, created_at)
-       VALUES ('astro', $1, 'claude-haiku-4-5', $2, $3, $4, $5, 'operation', NOW())`,
+      `INSERT INTO token_usage (agent_id, model, input_tokens, output_tokens, cost_usd, session_id, project, phase, created_at)
+       VALUES ('astro', 'claude-haiku-4-5', $1, $2, $3, $4, $5, 'operation', NOW())`,
       [
-        taskId,
         response.usage.input_tokens,
         response.usage.output_tokens,
-        response.usage.input_tokens + response.usage.output_tokens,
-        ((response.usage.input_tokens * 0.00000025) + (response.usage.output_tokens * 0.00000125)).toFixed(8)
+        ((response.usage.input_tokens * 0.00000025) + (response.usage.output_tokens * 0.00000125)).toFixed(8),
+        taskId,
+        project
       ]
     )
 
