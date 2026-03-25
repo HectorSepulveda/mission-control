@@ -1,14 +1,14 @@
 import { query } from '@/lib/db'
 
 interface Agent {
-  id: number
+  id: string
   name: string
   role: string
   model: string
   status: string
   tokens_used: number
   last_active: string
-  description: string
+  personality: string
   skills: string[] | null
   cost_per_1k_tokens: number | null
   config_skills: string | null
@@ -272,10 +272,10 @@ export default async function AgentsPage() {
                     </div>
                   </div>
 
-                  {/* Description */}
-                  {agent.description && (
+                  {/* Description / Personality */}
+                  {agent.personality && (
                     <p className="text-xs leading-relaxed mb-3 line-clamp-2" style={{ color: '#94a3b8' }}>
-                      {agent.description}
+                      {agent.personality}
                     </p>
                   )}
 
