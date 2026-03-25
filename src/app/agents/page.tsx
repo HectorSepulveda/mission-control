@@ -125,7 +125,7 @@ export default async function AgentsPage() {
                         </div>
                         {agent.cost_per_1k_tokens != null && (
                           <span className="text-[10px] font-mono shrink-0" style={{ color: costColor(agent.cost_per_1k_tokens) }}>
-                            ${agent.cost_per_1k_tokens.toFixed(agent.cost_per_1k_tokens >= 0.01 ? 3 : 4)}/1k
+                            ${Number(agent.cost_per_1k_tokens).toFixed(Number(agent.cost_per_1k_tokens) >= 0.01 ? 3 : 4)}/1k
                           </span>
                         )}
                       </div>
