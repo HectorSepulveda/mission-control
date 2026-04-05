@@ -100,8 +100,15 @@ function parseDelegations(text: string): Array<{ to: string; brief: string }> {
         d &&
         typeof d === 'object' &&
         typeof (d as Record<string, unknown>).to === 'string' &&
-        typeof (d as Record<string, unknown>).brief === 'string'
-    )
+        typeof (d as Record<string, unknown>).brief === 'string' &&
+        ((d as Record<string, unknown>).brief as string).length <= 500  // Fix CTO: anti-injection max length
+    ).map((d: unknown) => {
+      const del = d as Record<string, unknown>
+      return {
+        to: (del.to as string).trim().toLowerCase().slice(0, 50), // sanitizar key
+        brief: (del.brief as string).trim().slice(0, 500)
+      }
+    })
   } catch {
     return []
   }
@@ -137,11 +144,19 @@ export async function POST(req: NextRequest) {
          current_step = 'Procesando...', status = 'working', updated_at = NOW()`,
       [msg.to_agent, msg.content.slice(0, 60)]
     )
-    // También actualizar la tabla agents para que el polling de la página /agents lo refleje
-    await query(
-      `UPDATE agents SET status = 'working', last_active = NOW() WHERE agent_key = $1`,
+    // Fix race condition (CTO review): UPDATE condicional — solo si no está ya working
+    // Si retorna 0 filas, el agente ya está ocupado con otra tarea
+    const updateResult = await query<{ agent_key: string }>(
+      `UPDATE agents SET status = 'working', last_active = NOW()
+       WHERE agent_key = $1 AND status != 'working'
+       RETURNING agent_key`,
       [msg.to_agent]
     )
+    if (!updateResult.length) {
+      // Agente ocupado: reencolar el mensaje para el próximo ciclo del dispatcher
+      await query(`UPDATE agent_messages SET status = 'pending' WHERE id = $1`, [message_id])
+      return NextResponse.json({ queued: true, reason: `Agente ${msg.to_agent} ocupado, mensaje reencolado` })
+    }
 
     // 3. Cargar el agente destino
     const agents = await query<{
