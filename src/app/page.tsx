@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { query } from '@/lib/db'
 import LiveAgentsWidget from '@/components/LiveAgentsWidget'
+import VpsMetricsWidget from '@/components/VpsMetricsWidget'
 
 /* ── Types ───────────────────────────────────────────── */
 interface SummaryData {
@@ -369,8 +370,13 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* ── FILA 2: Agentes EN ESTE MOMENTO — live polling ── */}
-      <LiveAgentsWidget />
+      {/* ── VPS Métricas + Agentes en grid lado a lado ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <VpsMetricsWidget />
+        <div className="lg:col-span-2">
+          <LiveAgentsWidget />
+        </div>
+      </div>
 
       {/* ── FILA 3: Stats cards ─────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
