@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import Anthropic from '@anthropic-ai/sdk'
+import { routeLLM, type TaskType } from '@/lib/llm-router'
 
 export const dynamic = 'force-dynamic'
 
@@ -186,26 +186,38 @@ export async function POST(req: NextRequest) {
     const delegationBlock = isLead ? getDelegationInstruction(msg.to_agent) : ''
     const systemPrompt = `${basePrompt}${delegationBlock}\n\nEres parte de la Software Factory de Héctor Sepúlveda, emprendedor chileno.`
 
-    // 6. Llamar al modelo del agente
-    const apiKey = process.env.ANTHROPIC_API_KEY!
-    const client = new Anthropic({ apiKey })
-
-    let model = 'claude-haiku-4-5'
-    if (agent.model?.includes('sonnet')) model = 'claude-sonnet-4-6'
-    else if (agent.model?.includes('opus')) model = 'claude-opus-4-6'
-    else if (agent.model?.includes('haiku')) model = 'claude-haiku-4-5'
-
+    // 6. Determinar taskType para el router LLM
+    const taskTypeMap: Record<string, TaskType> = {
+      'cto':             'architecture',
+      'pm':              'coordination',
+      'marketing-lead':  'strategy',
+      'strategy':        'strategy',
+      'research':        'summary',
+      'backend':         'code',
+      'pixel':           'code',
+      'qa-func':         'qa',
+      'qa-tech':         'qa',
+      'content-writer':  'default',
+      'seo':             'default',
+      'social-media':    'default',
+      'email-marketing': 'default',
+    }
+    const taskType: TaskType = taskTypeMap[msg.to_agent] || 'default'
     const userMessage = `${msg.content}${taskContext}`
 
-    const response = await client.messages.create({
-      model,
-      max_tokens: isLead ? 800 : 600,  // leads necesitan más tokens para el bloque JSON
+    // 7. Llamar al LLM via Router (con fallback automático)
+    const llmResponse = await routeLLM({
       system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }]
+      prompt: userMessage,
+      taskType,
+      agentKey: msg.to_agent,
+      project: 'pettech',
+      maxTokens: isLead ? 800 : 600,
     })
 
-    const rawResult = response.content[0].type === 'text' ? response.content[0].text : ''
-    const tokens = response.usage.input_tokens + response.usage.output_tokens
+    const rawResult = llmResponse.text
+    const tokens = llmResponse.inputTokens + llmResponse.outputTokens
+    const model = llmResponse.model
 
     // 7. Si es lead: parsear delegaciones y crear mensajes para especialistas
     let delegationsCreated = 0
@@ -283,16 +295,7 @@ export async function POST(req: NextRequest) {
       [msg.to_agent, msg.content.slice(0, 60), stepLabel, tokens]
     )
 
-    // 12. Registrar tokens
-    await query(
-      `INSERT INTO token_usage (agent_id, provider, model, input_tokens, output_tokens, cost_usd, project, phase, created_at)
-       VALUES ($1, 'anthropic', $2, $3, $4, $5, 'pettech', 'operation', NOW())`,
-      [
-        msg.to_agent, model,
-        response.usage.input_tokens, response.usage.output_tokens,
-        ((response.usage.input_tokens * 0.00000025) + (response.usage.output_tokens * 0.00000125)).toFixed(8)
-      ]
-    )
+    // 12. Token usage ya registrado por el LLM Router (llm-router.ts)
 
     return NextResponse.json({
       success: true,
