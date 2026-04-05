@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
 
 const mainNav = [
   { href: '/', label: 'Dashboard', icon: (
@@ -50,10 +51,37 @@ const systemNav = [
       <path d="M8 4.5v7M6 6.5h3a1 1 0 010 2H7a1 1 0 000 2h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
     </svg>
   )},
+  { href: '/approvals', label: 'Aprobaciones', icon: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="3" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="1.2"/>
+      <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ), badge: true },
 ]
+
+interface ApprovalsResponse {
+  messages?: { id: number }[]
+}
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const [approvalCount, setApprovalCount] = useState(0)
+
+  const fetchApprovals = useCallback(async () => {
+    try {
+      const res = await fetch('/api/approvals', { cache: 'no-store' })
+      const data = await res.json() as ApprovalsResponse
+      setApprovalCount(data.messages?.length ?? 0)
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    void fetchApprovals()
+    const interval = setInterval(() => { void fetchApprovals() }, 60000)
+    return () => clearInterval(interval)
+  }, [fetchApprovals])
 
   return (
     <aside
@@ -127,14 +155,33 @@ export default function Sidebar() {
         </p>
         {systemNav.map((item) => {
           const isActive = pathname === item.href
+          const showBadge = 'badge' in item && item.badge && approvalCount > 0
           return (
             <div key={item.href} className="relative group">
               <Link
                 href={item.href}
                 className={`nav-link flex items-center justify-center lg:justify-start ${isActive ? 'active' : ''}`}
               >
-                <span className="flex-shrink-0">{item.icon}</span>
+                <span className="flex-shrink-0 relative">
+                  {item.icon}
+                  {showBadge && (
+                    <span
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
+                      style={{ background: '#fbbf24', color: '#0d0d10' }}
+                    >
+                      {approvalCount > 9 ? '9+' : approvalCount}
+                    </span>
+                  )}
+                </span>
                 <span className="hidden lg:inline">{item.label}</span>
+                {showBadge && (
+                  <span
+                    className="hidden lg:inline ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{ background: '#fbbf24', color: '#0d0d10' }}
+                  >
+                    {approvalCount}
+                  </span>
+                )}
               </Link>
               {/* Tooltip for tablet */}
               <div

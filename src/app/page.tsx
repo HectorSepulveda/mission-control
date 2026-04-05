@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { query } from '@/lib/db'
 import LiveAgentsWidget from '@/components/LiveAgentsWidget'
 import VpsMetricsWidget from '@/components/VpsMetricsWidget'
+import LlmStatusWidget from '@/components/LlmStatusWidget'
+import OpenClawStatusWidget from '@/components/OpenClawStatusWidget'
+import GithubActivityWidget from '@/components/GithubActivityWidget'
 
 /* ── Types ───────────────────────────────────────────── */
 interface SummaryData {
@@ -463,6 +466,13 @@ export default async function DashboardPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ── Widgets: LLM + OpenClaw + GitHub ───────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <LlmStatusWidget />
+        <OpenClawStatusWidget />
+        <GithubActivityWidget />
       </div>
 
       {/* ── Objetivos Clave ─────────────────────────────── */}
